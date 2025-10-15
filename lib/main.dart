@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_application/constants/size_config.dart';
-import 'package:flutter_application/screens/user/user_login_screen.dart';
+import 'package:flutter_application/screens/auth/login/user/user_login_screen.dart';
+import 'package:flutter_application/services/route_generator.dart';
 
 void main() {
   runApp(const MainApp());
@@ -37,7 +38,8 @@ class MainApp extends StatelessWidget {
         ),
         fontFamily: 'Roboto',
       ),
-      home: UserLoginScreen(),
+      home: const UserLoginScreen(),
+      onGenerateRoute: RouteGenerator.generateRoute,
     );
   }
 }
