@@ -1,6 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_application/constants/size_config.dart';
-import 'package:flutter_application/screens/auth/login/user/user_login_screen.dart';
+import 'package:flutter_application/screens/auth/login/superUser/superUser_login_screen.dart';
 import 'package:flutter_application/services/route_generator.dart';
 
 void main() {

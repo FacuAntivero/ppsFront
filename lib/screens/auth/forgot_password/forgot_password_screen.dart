@@ -93,6 +93,10 @@ class _ForgotPasswordScreenState extends State<ForgotPasswordScreen> {
           controller: emailController,
           labelText: 'Email de recuperación',
           prefixIcon: Icons.email_outlined,
+          validator: (v) {
+            if (v == null || v.trim().length < 3) return 'Min 3 caracteres';
+            return null;
+          },
         ),
         const SizedBox(height: 24),
         ElevatedButton(

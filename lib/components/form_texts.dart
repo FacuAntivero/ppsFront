@@ -1,5 +1,3 @@
-// lib/widgets/custom_text_form_field.dart
-
 import 'package:flutter/material.dart';
 
 class CustomTextFormField extends StatelessWidget {
@@ -7,6 +5,7 @@ class CustomTextFormField extends StatelessWidget {
   final String labelText;
   final IconData prefixIcon;
   final bool isPassword;
+  final Widget? suffixIcon;
 
   const CustomTextFormField({
     super.key,
@@ -14,6 +13,8 @@ class CustomTextFormField extends StatelessWidget {
     required this.labelText,
     required this.prefixIcon,
     this.isPassword = false,
+    this.suffixIcon,
+    required String? Function(dynamic v) validator,
   });
 
   @override
@@ -27,6 +28,7 @@ class CustomTextFormField extends StatelessWidget {
       decoration: InputDecoration(
         labelText: labelText,
         prefixIcon: Icon(prefixIcon),
+        suffixIcon: suffixIcon,
         contentPadding: EdgeInsetsGeometry.zero,
       ),
     );

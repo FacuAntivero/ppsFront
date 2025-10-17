@@ -4,19 +4,18 @@ import 'package:flutter_application/components/form_texts.dart';
 import 'package:flutter_application/constants/size_config.dart';
 import 'package:flutter_application/screens/auth/login/user/user_login_screen.dart';
 
-class SuperUserLoginScreen extends StatefulWidget {
-  const SuperUserLoginScreen({super.key});
+class UserLoginScreen extends StatefulWidget {
+  const UserLoginScreen({super.key});
 
   @override
-  State<SuperUserLoginScreen> createState() => _SuperUserLoginScreenState();
+  State<UserLoginScreen> createState() => _UserLoginScreenState();
 }
 
-class _SuperUserLoginScreenState extends State<SuperUserLoginScreen> {
-  final TextEditingController professionalEmailController =
-      TextEditingController();
-  final TextEditingController professionalPasswordController =
-      TextEditingController();
-  bool rememberProfessionalName = false;
+class _UserLoginScreenState extends State<UserLoginScreen> {
+  final TextEditingController userEmailController = TextEditingController();
+  final TextEditingController userPasswordController = TextEditingController();
+  bool rememberUserName = false;
+  bool _isPasswordVisible = false;
 
   @override
   Widget build(BuildContext context) {
@@ -30,17 +29,16 @@ class _SuperUserLoginScreenState extends State<SuperUserLoginScreen> {
             child: Column(
               children: [
                 ToggleButtons(
-                  isSelected: const [false, true],
+                  isSelected: const [true, false],
                   onPressed: (index) {
-                    if (index == 0) {
+                    if (index == 1) {
                       Navigator.pushReplacement(
                         context,
                         PageRouteBuilder(
-                          pageBuilder: (_, __, ___) => const UserLoginScreen(),
-                          transitionsBuilder: (_, a, __, c) => FadeTransition(
-                            opacity: a,
-                            child: c,
-                          ),
+                          pageBuilder: (_, __, ___) =>
+                              const SuperUserLoginScreen(),
+                          transitionsBuilder: (_, a, __, c) =>
+                              FadeTransition(opacity: a, child: c),
                           transitionDuration: const Duration(milliseconds: 300),
                         ),
                       );
@@ -55,7 +53,7 @@ class _SuperUserLoginScreenState extends State<SuperUserLoginScreen> {
                     Padding(
                       padding:
                           EdgeInsets.symmetric(horizontal: 24, vertical: 8),
-                      child: Text('Usuario'),
+                      child: Text('Residencia'),
                     ),
                     Padding(
                       padding:
@@ -81,12 +79,12 @@ class _SuperUserLoginScreenState extends State<SuperUserLoginScreen> {
                           const SizedBox(width: 60),
                           SizedBox(
                             width: 450,
-                            child: buildProfessionalLoginForm(isMobile: false),
+                            child: buildUserLoginForm(isMobile: false),
                           ),
                         ],
                       );
                     } else {
-                      return buildProfessionalLoginForm(isMobile: true);
+                      return buildUserLoginForm(isMobile: true);
                     }
                   },
                 ),
@@ -98,7 +96,7 @@ class _SuperUserLoginScreenState extends State<SuperUserLoginScreen> {
     );
   }
 
-  Widget buildProfessionalLoginForm({bool isMobile = false}) {
+  Widget buildUserLoginForm({bool isMobile = false}) {
     return Column(
       mainAxisAlignment: MainAxisAlignment.center,
       crossAxisAlignment:
@@ -115,22 +113,41 @@ class _SuperUserLoginScreenState extends State<SuperUserLoginScreen> {
           ),
         if (isMobile) SizedBox(height: SizeConfig.screenHeight * 0.05),
         CustomTextFormField(
-          controller: professionalEmailController,
-          labelText: 'Profesional (Matrícula)',
-          prefixIcon: Icons.school,
+          controller: userEmailController,
+          labelText: 'Usuario (Residencia)',
+          prefixIcon: Icons.person,
+          validator: (v) {
+            if (v == null || v.trim().length < 3) return 'Min 3 caracteres';
+            return null;
+          },
         ),
         SizedBox(height: SizeConfig.screenHeight * 0.03),
         CustomTextFormField(
-          controller: professionalPasswordController,
+          controller: userPasswordController,
           labelText: 'Contraseña',
           prefixIcon: Icons.lock,
-          isPassword: true,
+          isPassword: !_isPasswordVisible,
+          suffixIcon: IconButton(
+            icon: Icon(
+              _isPasswordVisible ? Icons.visibility : Icons.visibility_off,
+              color: Colors.grey,
+            ),
+            onPressed: () {
+              setState(() {
+                _isPasswordVisible = !_isPasswordVisible;
+              });
+            },
+          ),
+          validator: (v) {
+            if (v == null || v.trim().length < 3) return 'Min 3 caracteres';
+            return null;
+          },
         ),
         CommonFormWidgets(
           isMobile: isMobile,
-          rememberMeValue: rememberProfessionalName,
+          rememberMeValue: rememberUserName,
           onRememberMeChanged: (value) {
-            setState(() => rememberProfessionalName = value ?? false);
+            setState(() => rememberUserName = value ?? false);
           },
         ),
       ],
