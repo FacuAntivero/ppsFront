@@ -36,8 +36,7 @@ class _SignUpScreenState extends State<SignUpScreen> {
   @override
   void initState() {
     super.initState();
-    const baseUrl = 'http://192.168.56.1:3000'; // Android emulator
-    _api = ApiService(baseUrl);
+    _api = ApiService();
     licenseController.addListener(_updateButtonState);
   }
 
@@ -76,24 +75,25 @@ class _SignUpScreenState extends State<SignUpScreen> {
     try {
       final res = await _api!.validateLicense(key);
 
-      final bool valid = res is Map && res['valid'] == true;
-      final backendMessage = (res is Map && res.containsKey('message'))
+      final bool valid = res['valid'] == true;
+      final backendMessage = res.containsKey('message')
           ? res['message']?.toString()
           : 'Respuesta inesperada del servidor';
       final tipoLicencia = res['tipo_licencia'] ?? '-';
       final maxUsuarios = res['max_usuarios'] ?? 'ilimitado';
 
+      if (!mounted) return;
+
       setState(() {
         _licenseValid = valid;
 
         if (_licenseValid) {
-          _licenseInfo =
-              'Licencia válida: ${tipoLicencia} (Máx: ${maxUsuarios})';
+          _licenseInfo = 'Licencia válida: $tipoLicencia (Máx: $maxUsuarios)';
         } else {
-          _licenseInfo = 'Licencia inválida: $backendMessage';
+          _licenseInfo = '$backendMessage';
         }
       });
-    } on DioError catch (e) {
+    } on DioException catch (e) {
       // intentar extraer message/error del body
       String serverMsg = 'Error de conexión';
       if (e.response != null) {
@@ -142,21 +142,30 @@ class _SignUpScreenState extends State<SignUpScreen> {
     try {
       final res = await _api!.createSuperUser(
           superUser: name, password: pass, licenseKey: license);
+
+      if (!mounted) return;
+
       if (res['success'] == true) {
-        // guardar superUser localmente si querés
         await _storage.write(key: 'superUser', value: name);
+        if (!mounted) return;
         ScaffoldMessenger.of(context).showSnackBar(
             const SnackBar(content: Text('Residencia creada correctamente')));
+        if (!mounted) return;
         Navigator.pop(context); // volver a login, por ejemplo
       } else {
         final err = res['error'] ?? 'Error al crear';
+        if (!mounted) return;
         ScaffoldMessenger.of(context)
             .showSnackBar(SnackBar(content: Text(err)));
       }
     } catch (e) {
+      // Chequeo de mounted antes de usar context
+      if (!mounted) return;
       ScaffoldMessenger.of(context)
           .showSnackBar(SnackBar(content: Text('Error de red o servidor')));
     } finally {
+      // Chequeo de mounted en el finally
+      if (!mounted) return;
       setState(() => _isCreating = false);
     }
   }
@@ -263,8 +272,9 @@ class _SignUpScreenState extends State<SignUpScreen> {
                                   color: Colors.green)
                               : null),
                       validator: (v) {
-                        if (v == null || v.length < 6)
+                        if (v == null || v.length < 6) {
                           return 'Min 6 caracteres';
+                        }
                         return null;
                       },
                     ),
@@ -349,8 +359,10 @@ class _SignUpScreenState extends State<SignUpScreen> {
                   () => _isConfirmPasswordVisible = !_isConfirmPasswordVisible),
             ),
             validator: (v) {
-              if (v == null || v != passwordController.text)
+              if (v == null || v != passwordController.text) {
                 return 'No coincide';
+              }
+
               return null;
             },
           ),
