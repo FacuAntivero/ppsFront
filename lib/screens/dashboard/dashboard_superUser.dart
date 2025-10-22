@@ -31,13 +31,12 @@ class _SuperUserDashboardState extends State<SuperUserDashboard> {
   @override
   void initState() {
     super.initState();
-    // puedes pasar baseUrl si lo necesitas: ApiService(baseUrl: 'http://...')
     api = ApiService();
     _fetchUsuarios();
   }
 
   Future<void> _logoutAndGoToLogin() async {
-    // (opcional) confirmación
+    // 1. EL HUECO ASÍNCRONO (await)
     final ok = await showDialog<bool>(
       context: context,
       builder: (ctx) => AlertDialog(
@@ -53,16 +52,18 @@ class _SuperUserDashboardState extends State<SuperUserDashboard> {
         ],
       ),
     );
+
+    if (!mounted) return;
+
     if (ok != true) return;
 
-    // 1) limpiar credenciales / token
     await _storage.delete(key: 'superUser');
     await _storage.delete(key: 'tipo_licencia');
-    // await _storage.deleteAll(); // si querés borrar todo
 
-    // 2) navegar al login y eliminar todas las rutas anteriores
+    if (!mounted) return;
+
     Navigator.of(context).pushAndRemoveUntil(
-      MaterialPageRoute(builder: (_) => const UserLoginScreen()),
+      MaterialPageRoute(builder: (_) => const SuperUserLoginScreen()),
       (route) => false,
     );
   }
@@ -103,7 +104,6 @@ class _SuperUserDashboardState extends State<SuperUserDashboard> {
       barrierDismissible: false,
       builder: (ctx) {
         return StatefulBuilder(builder: (ctx, setStateDialog) {
-          // helper to submit
           Future<void> submit() async {
             if (!formKey.currentState!.validate()) return;
             setStateDialog(() {
@@ -117,10 +117,17 @@ class _SuperUserDashboardState extends State<SuperUserDashboard> {
                 nombreReal: nombreCtrl.text.trim(),
                 password: passCtrl.text,
               );
+
+              if (!mounted) return;
+
               if (resp['success'] == true) {
+                if (!ctx.mounted) return;
+
                 Navigator.of(ctx).pop();
+
                 ScaffoldMessenger.of(context).showSnackBar(
                     const SnackBar(content: Text('Usuario creado')));
+
                 await _fetchUsuarios();
                 return;
               } else {
@@ -202,7 +209,7 @@ class _SuperUserDashboardState extends State<SuperUserDashboard> {
                                 decoration: InputDecoration(
                                   prefixIcon: const Icon(Icons.badge_outlined),
                                   labelText: 'Nombre real',
-                                  hintText: 'Nombre completo',
+                                  hintText: 'ej: Facundo Antivero',
                                   filled: true,
                                   contentPadding: const EdgeInsets.symmetric(
                                       horizontal: 12, vertical: 14),
@@ -337,7 +344,6 @@ class _SuperUserDashboardState extends State<SuperUserDashboard> {
             });
 
             try {
-              // Llamada al API - enviamos superUser en el body (compatibilidad)
               final resp = await api.changePassword(
                 superUser: widget.superUser, // enviado en body
                 superUserPassword: superPassCtrl.text,
@@ -345,8 +351,13 @@ class _SuperUserDashboardState extends State<SuperUserDashboard> {
                 newPassword: newPassCtrl.text,
               );
 
+              if (!mounted) return;
+
               if (resp['success'] == true) {
+                if (!ctx.mounted) return;
+
                 Navigator.of(ctx).pop();
+
                 ScaffoldMessenger.of(context).showSnackBar(
                   const SnackBar(
                       content: Text('Contraseña actualizada correctamente')),

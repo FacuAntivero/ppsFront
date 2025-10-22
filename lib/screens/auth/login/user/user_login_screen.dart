@@ -2,19 +2,21 @@ import 'package:dio/dio.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_application/components/common_form_widgets.dart';
 import 'package:flutter_application/components/form_texts.dart';
+import 'package:flutter_application/components/responsive_login_layout.dart';
 import 'package:flutter_application/constants/size_config.dart';
 import 'package:flutter_application/screens/auth/login/superuser/superuser_login_screen.dart';
 import 'package:flutter_application/screens/dashboard/dashboard_user.dart';
 import 'package:flutter_application/services/api_service.dart';
+import 'package:flutter_application/components/primary_action_button.dart';
 
-class SuperUserLoginScreen extends StatefulWidget {
-  const SuperUserLoginScreen({super.key});
+class UserLoginScreen extends StatefulWidget {
+  const UserLoginScreen({super.key});
 
   @override
-  State<SuperUserLoginScreen> createState() => _SuperUserLoginScreenState();
+  State<UserLoginScreen> createState() => _UserLoginScreenState();
 }
 
-class _SuperUserLoginScreenState extends State<SuperUserLoginScreen> {
+class _UserLoginScreenState extends State<UserLoginScreen> {
   final TextEditingController professionalEmailController =
       TextEditingController();
   final TextEditingController professionalPasswordController =
@@ -133,7 +135,7 @@ class _SuperUserLoginScreenState extends State<SuperUserLoginScreen> {
                   setState(() => _isPasswordVisible = !_isPasswordVisible),
             ),
             validator: (v) {
-              if (v == null || v.trim().length < 6) return 'Min 6 caracteres';
+              if (v == null || v.trim().length < 6) return 'Min 3 caracteres';
               return null;
             },
           ),
@@ -153,26 +155,15 @@ class _SuperUserLoginScreenState extends State<SuperUserLoginScreen> {
                   style: const TextStyle(color: Colors.red),
                   textAlign: TextAlign.center),
             ),
-          ElevatedButton(
+          PrimaryActionButton(
             onPressed: _isLoggingIn ? null : _onLoginPressed,
-            style: ElevatedButton.styleFrom(
-              backgroundColor: Colors.teal,
-              shape: RoundedRectangleBorder(
-                  borderRadius: BorderRadius.circular(8)),
-              padding: const EdgeInsets.symmetric(vertical: 16),
-            ),
-            child: _isLoggingIn
-                ? const SizedBox(
-                    height: 20,
-                    width: 20,
-                    child: CircularProgressIndicator(
-                        color: Colors.white, strokeWidth: 2))
-                : const Text('Iniciar sesión',
-                    style: TextStyle(color: Colors.white, fontSize: 16)),
+            loading: _isLoggingIn,
+            label: 'Iniciar sesión',
+            height: 52, // coincidente con campos
           ),
-          const SizedBox(height: 12),
+
           const SizedBox(
-              height: 36), // <- placeholder que iguala la altura del TextButton
+              height: 44), // <- placeholder que iguala la altura del TextButton
         ],
       ),
     );
@@ -190,7 +181,8 @@ class _SuperUserLoginScreenState extends State<SuperUserLoginScreen> {
             child: Column(
               children: [
                 ToggleButtons(
-                  isSelected: _toggleSelected,
+                  isSelected:
+                      _toggleSelected, // debe ser [false, true] en initState
                   onPressed: (index) {
                     setState(() {
                       for (int i = 0; i < _toggleSelected.length; i++) {
@@ -198,19 +190,19 @@ class _SuperUserLoginScreenState extends State<SuperUserLoginScreen> {
                       }
                     });
 
+                    // Si selecciona "Residencia" (índice 0) -> navegar a SuperUserLoginScreen
                     if (index == 0) {
-                      // Volver a la pantalla de login de Residencia (UserLoginScreen)
                       Navigator.pushReplacement(
                         context,
                         PageRouteBuilder(
-                          pageBuilder: (_, __, ___) => const UserLoginScreen(),
+                          pageBuilder: (_, __, ___) =>
+                              const SuperUserLoginScreen(),
                           transitionsBuilder: (_, a, __, c) =>
                               FadeTransition(opacity: a, child: c),
                           transitionDuration: const Duration(milliseconds: 300),
                         ),
                       );
                     }
-                    // si index == 1, ya estás en Profesional; no navegamos
                   },
                   borderRadius: BorderRadius.circular(8),
                   selectedBorderColor: Colors.teal,
@@ -229,30 +221,14 @@ class _SuperUserLoginScreenState extends State<SuperUserLoginScreen> {
                   ],
                 ),
                 SizedBox(height: SizeConfig.screenHeight * 0.05),
-                LayoutBuilder(
-                  builder: (context, constraints) {
-                    final isDesktop = constraints.maxWidth > 800;
-                    if (isDesktop) {
-                      return Row(
-                        mainAxisAlignment: MainAxisAlignment.center,
-                        crossAxisAlignment: CrossAxisAlignment.center,
-                        children: [
-                          Expanded(
-                              flex: 2,
-                              child: Image.asset(
-                                  'assets/images/LogoCircular.png',
-                                  fit: BoxFit.contain)),
-                          const SizedBox(width: 60),
-                          SizedBox(
-                              width: 450,
-                              child:
-                                  buildProfessionalLoginForm(isMobile: false)),
-                        ],
-                      );
-                    } else {
-                      return buildProfessionalLoginForm(isMobile: true);
-                    }
-                  },
+                ResponsiveLoginLayout(
+                  form: buildProfessionalLoginForm(isMobile: false),
+                  imageAsset: 'assets/images/LogoCircular.png',
+                  formWidth: 450,
+                  imageMaxWidthFraction: 0.35,
+                  imageMaxWidthPx: 360,
+                  spacing: 60,
+                  desktopBreakpoint: 800,
                 ),
               ],
             ),

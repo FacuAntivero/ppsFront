@@ -2,20 +2,23 @@ import 'package:dio/dio.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_application/components/common_form_widgets.dart';
 import 'package:flutter_application/components/form_texts.dart';
+import 'package:flutter_application/components/responsive_login_layout.dart';
 import 'package:flutter_application/constants/size_config.dart';
 import 'package:flutter_application/screens/auth/login/user/user_login_screen.dart';
+import 'package:flutter_application/screens/dashboard/admin_dashboard.dart';
 import 'package:flutter_application/services/api_service.dart';
 import 'package:flutter_secure_storage/flutter_secure_storage.dart';
 import 'package:flutter_application/screens/dashboard/dashboard_superUser.dart';
+import 'package:flutter_application/components/primary_action_button.dart';
 
-class UserLoginScreen extends StatefulWidget {
-  const UserLoginScreen({super.key});
+class SuperUserLoginScreen extends StatefulWidget {
+  const SuperUserLoginScreen({super.key});
 
   @override
-  State<UserLoginScreen> createState() => _UserLoginScreenState();
+  State<SuperUserLoginScreen> createState() => _SuperUserLoginScreenState();
 }
 
-class _UserLoginScreenState extends State<UserLoginScreen> {
+class _SuperUserLoginScreenState extends State<SuperUserLoginScreen> {
   final TextEditingController userNameController = TextEditingController();
   final TextEditingController userPasswordController = TextEditingController();
   bool rememberUserName = false;
@@ -52,24 +55,31 @@ class _UserLoginScreenState extends State<UserLoginScreen> {
 
       if (res['success'] == true) {
         final tipo = res['tipo_licencia']; // puede ser null
-        // Guardar el superUser localmente si lo necesitas
+        final isAdmin = res['is_admin'] == true;
+
+        // opcional: guardar superUser y tipo
         await _storage.write(key: 'superUser', value: usuario);
         await _storage.write(
             key: 'tipo_licencia', value: tipo?.toString() ?? '');
 
-        // Navegar al dashboard correspondiente (reemplaza por tu ruta real)
         if (!mounted) return;
-        Navigator.pushReplacement(
-          context,
-          MaterialPageRoute(
-            builder: (_) => SuperUserDashboard(
-              superUser: usuario,
-              tipoLicencia: tipo?.toString(),
+
+        if (isAdmin) {
+          // Navegar al dashboard administrador
+          Navigator.pushReplacementNamed(context, AdminDashboard.routeName);
+        } else {
+          // Dashboard normal de residencia
+          Navigator.pushReplacement(
+            context,
+            MaterialPageRoute(
+              builder: (_) => SuperUserDashboard(
+                superUser: usuario,
+                tipoLicencia: tipo?.toString(),
+              ),
             ),
-          ),
-        );
+          );
+        }
       } else {
-        // Mostrar mensaje recibido del backend
         final err = res['error'] ?? res['message'] ?? 'Credenciales inválidas';
         setState(() => _loginError = err.toString());
       }
@@ -100,7 +110,8 @@ class _UserLoginScreenState extends State<UserLoginScreen> {
             child: Column(
               children: [
                 ToggleButtons(
-                  isSelected: _toggleSelected,
+                  isSelected:
+                      _toggleSelected, // debe ser [true, false] en initState
                   onPressed: (index) {
                     setState(() {
                       for (int i = 0; i < _toggleSelected.length; i++) {
@@ -108,12 +119,12 @@ class _UserLoginScreenState extends State<UserLoginScreen> {
                       }
                     });
 
+                    // Si selecciona "Profesional" (índice 1) -> navegar a UserLoginScreen
                     if (index == 1) {
                       Navigator.pushReplacement(
                         context,
                         PageRouteBuilder(
-                          pageBuilder: (_, __, ___) =>
-                              const SuperUserLoginScreen(),
+                          pageBuilder: (_, __, ___) => const UserLoginScreen(),
                           transitionsBuilder: (_, a, __, c) =>
                               FadeTransition(opacity: a, child: c),
                           transitionDuration: const Duration(milliseconds: 300),
@@ -138,30 +149,14 @@ class _UserLoginScreenState extends State<UserLoginScreen> {
                   ],
                 ),
                 SizedBox(height: SizeConfig.screenHeight * 0.05),
-                LayoutBuilder(
-                  builder: (context, constraints) {
-                    final isDesktop = constraints.maxWidth > 800;
-                    if (isDesktop) {
-                      return Row(
-                        mainAxisAlignment: MainAxisAlignment.center,
-                        crossAxisAlignment: CrossAxisAlignment.center,
-                        children: [
-                          Expanded(
-                            flex: 2,
-                            child: Image.asset('assets/images/LogoCircular.png',
-                                fit: BoxFit.contain),
-                          ),
-                          const SizedBox(width: 60),
-                          SizedBox(
-                            width: 450,
-                            child: buildUserLoginForm(isMobile: false),
-                          ),
-                        ],
-                      );
-                    } else {
-                      return buildUserLoginForm(isMobile: true);
-                    }
-                  },
+                ResponsiveLoginLayout(
+                  form: buildUserLoginForm(isMobile: false),
+                  imageAsset: 'assets/images/LogoCircular.png',
+                  formWidth: 450,
+                  imageMaxWidthFraction: 0.35,
+                  imageMaxWidthPx: 360,
+                  spacing: 60,
+                  desktopBreakpoint: 800,
                 ),
               ],
             ),
@@ -242,24 +237,12 @@ class _UserLoginScreenState extends State<UserLoginScreen> {
             ),
 
           // Login button
-          ElevatedButton(
+          PrimaryActionButton(
             onPressed: _isLoggingIn ? null : _onLoginPressed,
-            style: ElevatedButton.styleFrom(
-              backgroundColor: Colors.teal,
-              shape: RoundedRectangleBorder(
-                  borderRadius: BorderRadius.circular(8)),
-              padding: const EdgeInsets.symmetric(vertical: 16),
-            ),
-            child: _isLoggingIn
-                ? const SizedBox(
-                    height: 20,
-                    width: 20,
-                    child: CircularProgressIndicator(
-                        color: Colors.white, strokeWidth: 2))
-                : const Text('Iniciar sesión',
-                    style: TextStyle(color: Colors.white, fontSize: 16)),
+            loading: _isLoggingIn,
+            label: 'Iniciar sesión',
+            height: 52,
           ),
-
           const SizedBox(height: 12),
 
           // Link to sign up or other navigation

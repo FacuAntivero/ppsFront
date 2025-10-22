@@ -3,6 +3,7 @@ import 'package:flutter_application/screens/auth/forgot_password/forgot_password
 import 'package:flutter_application/screens/auth/signup/sign_up_screen.dart';
 import 'package:flutter_application/screens/dashboard/dashboard_superUser.dart';
 import 'package:flutter_application/screens/dashboard/dashboard_user.dart';
+import 'package:flutter_application/screens/dashboard/admin_dashboard.dart';
 
 class RouteGenerator {
   static Route<dynamic> generateRoute(RouteSettings settings) {
@@ -23,6 +24,9 @@ class RouteGenerator {
 
       case UserDashboard.routeName:
         return MaterialPageRoute(builder: (_) => const UserDashboard());
+
+      case AdminDashboard.routeName:
+        return MaterialPageRoute(builder: (_) => const AdminDashboard());
 
       default:
         return _errorRoute();
