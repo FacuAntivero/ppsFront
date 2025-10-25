@@ -57,18 +57,20 @@ class _SuperUserLoginScreenState extends State<SuperUserLoginScreen> {
         final tipo = res['tipo_licencia']; // puede ser null
         final isAdmin = res['is_admin'] == true;
 
-        // opcional: guardar superUser y tipo
         await _storage.write(key: 'superUser', value: usuario);
+
+        if (isAdmin) {
+          await _storage.write(key: 'admin_pass', value: password);
+        }
+
         await _storage.write(
             key: 'tipo_licencia', value: tipo?.toString() ?? '');
 
         if (!mounted) return;
 
         if (isAdmin) {
-          // Navegar al dashboard administrador
           Navigator.pushReplacementNamed(context, AdminDashboard.routeName);
         } else {
-          // Dashboard normal de residencia
           Navigator.pushReplacement(
             context,
             MaterialPageRoute(
@@ -119,7 +121,6 @@ class _SuperUserLoginScreenState extends State<SuperUserLoginScreen> {
                       }
                     });
 
-                    // Si selecciona "Profesional" (índice 1) -> navegar a UserLoginScreen
                     if (index == 1) {
                       Navigator.pushReplacement(
                         context,
@@ -195,7 +196,7 @@ class _SuperUserLoginScreenState extends State<SuperUserLoginScreen> {
               return null;
             },
           ),
-          SizedBox(height: SizeConfig.screenHeight * 0.03),
+          SizedBox(height: SizeConfig.screenHeight * 0.01),
 
           // Contraseña
           CustomTextFormField(

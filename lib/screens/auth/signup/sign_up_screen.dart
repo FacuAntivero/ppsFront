@@ -250,21 +250,19 @@ class _SignUpScreenState extends State<SignUpScreen> {
               return null;
             },
           ),
-          SizedBox(height: SizeConfig.screenHeight * 0.03),
-
-          // Licencia + botón validar
+          SizedBox(height: SizeConfig.screenHeight * 0.01),
           Column(
-            crossAxisAlignment: CrossAxisAlignment.stretch,
+            crossAxisAlignment: CrossAxisAlignment.start,
             children: [
               Row(
-                crossAxisAlignment: CrossAxisAlignment.start,
+                crossAxisAlignment: CrossAxisAlignment.center,
+                mainAxisAlignment: MainAxisAlignment.center,
                 children: [
                   Expanded(
                     child: CustomTextFormField(
                       controller: licenseController,
                       labelText: 'Licencia',
                       prefixIcon: Icons.fingerprint,
-                      // mostramos check si _licenseInfo indica éxito
                       suffixIcon: _isValidating
                           ? null
                           : (_licenseInfo?.startsWith('Licencia:') == true
@@ -280,34 +278,31 @@ class _SignUpScreenState extends State<SignUpScreen> {
                     ),
                   ),
                   const SizedBox(width: 8),
-                  Padding(
-                    padding: const EdgeInsets.only(top: 8.0),
-                    child: ElevatedButton(
-                      onPressed: _isValidating ? null : _validateLicense,
-                      style: ElevatedButton.styleFrom(
-                        backgroundColor: Colors.teal,
-                        padding: const EdgeInsets.symmetric(
-                            horizontal: 16, vertical: 15),
-                        shape: RoundedRectangleBorder(
-                            borderRadius: BorderRadius.circular(8)),
-                      ),
-                      child: _isValidating
-                          ? const SizedBox(
-                              height: 20,
-                              width: 20,
-                              child: CircularProgressIndicator(
-                                  color: Colors.white, strokeWidth: 2))
-                          : const Text('Validar',
-                              style: TextStyle(
-                                  color: Colors.white,
-                                  fontWeight: FontWeight.bold)),
+                  ElevatedButton(
+                    onPressed: _isValidating ? null : _validateLicense,
+                    style: ElevatedButton.styleFrom(
+                      backgroundColor: Colors.teal,
+                      padding: const EdgeInsets.symmetric(
+                          horizontal: 16, vertical: 15),
+                      shape: RoundedRectangleBorder(
+                          borderRadius: BorderRadius.circular(8)),
                     ),
+                    child: _isValidating
+                        ? const SizedBox(
+                            height: 20,
+                            width: 20,
+                            child: CircularProgressIndicator(
+                                color: Colors.white, strokeWidth: 2))
+                        : const Text('Validar',
+                            style: TextStyle(
+                                color: Colors.white,
+                                fontWeight: FontWeight.bold)),
                   ),
                 ],
               ),
               if (_licenseInfo != null)
                 Padding(
-                  padding: const EdgeInsets.only(top: 8.0, left: 12.0),
+                  padding: const EdgeInsets.only(top: 0, left: 12.0),
                   child: Text(
                     _licenseInfo!,
                     style: TextStyle(
@@ -321,7 +316,7 @@ class _SignUpScreenState extends State<SignUpScreen> {
             ],
           ),
 
-          SizedBox(height: SizeConfig.screenHeight * 0.03),
+          SizedBox(height: SizeConfig.screenHeight * 0.01),
 
           // Contraseña
           CustomTextFormField(
@@ -341,7 +336,7 @@ class _SignUpScreenState extends State<SignUpScreen> {
               return null;
             },
           ),
-          SizedBox(height: SizeConfig.screenHeight * 0.03),
+          SizedBox(height: SizeConfig.screenHeight * 0.01),
 
           // Confirmar contraseña
           CustomTextFormField(

@@ -1,10 +1,10 @@
-// lib/screens/dashboard/superuser_dashboard.dart
 import 'package:flutter/material.dart';
 import 'package:flutter_application/screens/auth/login/superuser/superuser_login_screen.dart';
 import 'package:flutter_application/services/api_service.dart';
 import 'package:flutter_secure_storage/flutter_secure_storage.dart';
+import 'package:flutter_application/dialogs/add_professional_dialog.dart';
+import 'package:flutter_application/utils/auth_utils.dart';
 
-/// Pantalla principal del dashboard para SuperUser (residencia).
 class SuperUserDashboard extends StatefulWidget {
   static const String routeName = '/superuser-dashboard';
 
@@ -27,45 +27,48 @@ class _SuperUserDashboardState extends State<SuperUserDashboard> {
   String? _error;
   List<Map<String, dynamic>> usuarios = []; // cada item: { user, nombreReal }
   final _storage = const FlutterSecureStorage();
+  String? _tipoLicencia;
+  String? _estadoLicencia;
 
   @override
   void initState() {
     super.initState();
     api = ApiService();
     _fetchUsuarios();
+    _fetchLicense();
   }
 
-  Future<void> _logoutAndGoToLogin() async {
-    // 1. EL HUECO ASÍNCRONO (await)
-    final ok = await showDialog<bool>(
-      context: context,
-      builder: (ctx) => AlertDialog(
-        title: const Text('Cerrar sesión'),
-        content: const Text('¿Seguro que querés cerrar sesión?'),
-        actions: [
-          TextButton(
-              onPressed: () => Navigator.of(ctx).pop(false),
-              child: const Text('Cancelar')),
-          TextButton(
-              onPressed: () => Navigator.of(ctx).pop(true),
-              child: const Text('Cerrar sesión')),
-        ],
-      ),
-    );
+  Future<void> _fetchLicense() async {
+    try {
+      final res = await api.getActiveLicense(widget.superUser);
 
-    if (!mounted) return;
+      if (res['success'] == true) {
+        final lic = res['license'];
+        if (lic != null && lic is Map) {
+          setState(() {
+            _tipoLicencia = lic['tipo_licencia']?.toString();
+            // Aseguramos aceptar distintas claves por compatibilidad
+            _estadoLicencia = lic['estado']?.toString() ??
+                lic['status']?.toString() ??
+                lic['state']?.toString();
+          });
+          return;
+        }
+      }
 
-    if (ok != true) return;
-
-    await _storage.delete(key: 'superUser');
-    await _storage.delete(key: 'tipo_licencia');
-
-    if (!mounted) return;
-
-    Navigator.of(context).pushAndRemoveUntil(
-      MaterialPageRoute(builder: (_) => const SuperUserLoginScreen()),
-      (route) => false,
-    );
+      // Si no hay licencia activa o error lógico
+      setState(() {
+        _tipoLicencia = null;
+        _estadoLicencia = null;
+      });
+    } catch (_) {
+      // Usamos '_' para indicar que ignoramos el objeto de excepción
+      // También podrías usar 'e' y simplemente no referenciarla: 'catch (e)'
+      setState(() {
+        _tipoLicencia = null;
+        _estadoLicencia = null;
+      });
+    }
   }
 
   Future<void> _fetchUsuarios() async {
@@ -91,225 +94,18 @@ class _SuperUserDashboardState extends State<SuperUserDashboard> {
   }
 
   Future<void> _showCreateUserDialog() async {
-    final userCtrl = TextEditingController();
-    final nombreCtrl = TextEditingController();
-    final passCtrl = TextEditingController();
-    final formKey = GlobalKey<FormState>();
-    bool submitting = false;
-    String? remoteError;
-    bool passwordVisible = false;
-
-    await showDialog<void>(
-      context: context,
-      barrierDismissible: false,
-      builder: (ctx) {
-        return StatefulBuilder(builder: (ctx, setStateDialog) {
-          Future<void> submit() async {
-            if (!formKey.currentState!.validate()) return;
-            setStateDialog(() {
-              submitting = true;
-              remoteError = null;
-            });
-            try {
-              final resp = await api.createUsuario(
-                user: userCtrl.text.trim(),
-                superUser: widget.superUser,
-                nombreReal: nombreCtrl.text.trim(),
-                password: passCtrl.text,
-              );
-
-              if (!mounted) return;
-
-              if (resp['success'] == true) {
-                if (!ctx.mounted) return;
-
-                Navigator.of(ctx).pop();
-
-                ScaffoldMessenger.of(context).showSnackBar(
-                    const SnackBar(content: Text('Usuario creado')));
-
-                await _fetchUsuarios();
-                return;
-              } else {
-                final err =
-                    resp['error'] ?? resp['message'] ?? 'Error creando usuario';
-                setStateDialog(() => remoteError = err.toString());
-              }
-            } catch (e) {
-              setStateDialog(() => remoteError = 'Error: $e');
-            } finally {
-              setStateDialog(() => submitting = false);
-            }
-          }
-
-          return Dialog(
-            shape:
-                RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
-            insetPadding:
-                const EdgeInsets.symmetric(horizontal: 24, vertical: 24),
-            child: ConstrainedBox(
-              constraints: const BoxConstraints(maxWidth: 520),
-              child: Padding(
-                padding:
-                    const EdgeInsets.symmetric(horizontal: 20, vertical: 18),
-                child: SingleChildScrollView(
-                  child: Column(
-                    mainAxisSize: MainAxisSize.min,
-                    children: [
-                      // Header
-                      Row(
-                        children: [
-                          const Expanded(
-                            child: Text(
-                              'Agregar profesional',
-                              style: TextStyle(
-                                  fontSize: 18, fontWeight: FontWeight.w600),
-                            ),
-                          ),
-                          IconButton(
-                            onPressed: submitting
-                                ? null
-                                : () => Navigator.of(ctx).pop(),
-                            icon: const Icon(Icons.close),
-                          )
-                        ],
-                      ),
-                      const SizedBox(height: 8),
-
-                      // Form
-                      Form(
-                        key: formKey,
-                        child: AutofillGroup(
-                          child: Column(
-                            mainAxisSize: MainAxisSize.min,
-                            children: [
-                              TextFormField(
-                                controller: userCtrl,
-                                autofocus: true,
-                                textInputAction: TextInputAction.next,
-                                decoration: InputDecoration(
-                                  prefixIcon: const Icon(Icons.person_outline),
-                                  labelText: 'Usuario (login)',
-                                  hintText: 'ej: licgonzalez',
-                                  filled: true,
-                                  contentPadding: const EdgeInsets.symmetric(
-                                      horizontal: 12, vertical: 14),
-                                  border: OutlineInputBorder(
-                                      borderRadius: BorderRadius.circular(8)),
-                                ),
-                                validator: (v) =>
-                                    (v == null || v.trim().length < 3)
-                                        ? 'Min 3 caracteres'
-                                        : null,
-                              ),
-                              const SizedBox(height: 12),
-                              TextFormField(
-                                controller: nombreCtrl,
-                                textInputAction: TextInputAction.next,
-                                decoration: InputDecoration(
-                                  prefixIcon: const Icon(Icons.badge_outlined),
-                                  labelText: 'Nombre real',
-                                  hintText: 'ej: Facundo Antivero',
-                                  filled: true,
-                                  contentPadding: const EdgeInsets.symmetric(
-                                      horizontal: 12, vertical: 14),
-                                  border: OutlineInputBorder(
-                                      borderRadius: BorderRadius.circular(8)),
-                                ),
-                                validator: (v) =>
-                                    (v == null || v.trim().length < 3)
-                                        ? 'Min 3 caracteres'
-                                        : null,
-                              ),
-                              const SizedBox(height: 12),
-                              TextFormField(
-                                controller: passCtrl,
-                                obscureText: !passwordVisible,
-                                textInputAction: TextInputAction.done,
-                                decoration: InputDecoration(
-                                  prefixIcon: const Icon(Icons.lock_outline),
-                                  labelText: 'Contraseña',
-                                  hintText: 'Min 6 caracteres',
-                                  filled: true,
-                                  contentPadding: const EdgeInsets.symmetric(
-                                      horizontal: 12, vertical: 14),
-                                  border: OutlineInputBorder(
-                                      borderRadius: BorderRadius.circular(8)),
-                                  suffixIcon: IconButton(
-                                    icon: Icon(passwordVisible
-                                        ? Icons.visibility
-                                        : Icons.visibility_off),
-                                    onPressed: () => setStateDialog(() =>
-                                        passwordVisible = !passwordVisible),
-                                  ),
-                                ),
-                                validator: (v) => (v == null || v.length < 6)
-                                    ? 'Min 6 caracteres'
-                                    : null,
-                                onFieldSubmitted: (_) => submit(),
-                              ),
-                            ],
-                          ),
-                        ),
-                      ),
-
-                      // Remote / validation error
-                      if (remoteError != null) ...[
-                        const SizedBox(height: 12),
-                        Text(remoteError!,
-                            style: const TextStyle(color: Colors.red),
-                            textAlign: TextAlign.center),
-                      ],
-
-                      const SizedBox(height: 16),
-
-                      // Actions
-                      Row(
-                        children: [
-                          Expanded(
-                            child: OutlinedButton(
-                              onPressed: submitting
-                                  ? null
-                                  : () => Navigator.of(ctx).pop(),
-                              style: OutlinedButton.styleFrom(
-                                padding:
-                                    const EdgeInsets.symmetric(vertical: 14),
-                                shape: RoundedRectangleBorder(
-                                    borderRadius: BorderRadius.circular(8)),
-                              ),
-                              child: const Text('Cancelar'),
-                            ),
-                          ),
-                          const SizedBox(width: 12),
-                          Expanded(
-                            child: ElevatedButton(
-                              onPressed: submitting ? null : submit,
-                              style: ElevatedButton.styleFrom(
-                                padding:
-                                    const EdgeInsets.symmetric(vertical: 14),
-                                shape: RoundedRectangleBorder(
-                                    borderRadius: BorderRadius.circular(8)),
-                              ),
-                              child: submitting
-                                  ? const SizedBox(
-                                      width: 20,
-                                      height: 20,
-                                      child: CircularProgressIndicator(
-                                          color: Colors.white, strokeWidth: 2))
-                                  : const Text('Crear'),
-                            ),
-                          ),
-                        ],
-                      ),
-                    ],
-                  ),
-                ),
-              ),
-            ),
-          );
-        });
-      },
+    final created = await AddProfessionalDialog.show(
+      context,
+      api: api,
+      superUser: widget.superUser,
     );
+
+    if (created == true) {
+      await _fetchUsuarios();
+      if (!mounted) return;
+      ScaffoldMessenger.of(context)
+          .showSnackBar(const SnackBar(content: Text('Usuario creado')));
+    }
   }
 
   Future<void> _showChangePasswordDialog(String targetUser) async {
@@ -592,21 +388,39 @@ class _SuperUserDashboardState extends State<SuperUserDashboard> {
           Text(widget.superUser,
               style:
                   const TextStyle(fontSize: 16, fontWeight: FontWeight.bold)),
-          if (widget.tipoLicencia != null)
-            Text('Licencia: ${widget.tipoLicencia}',
-                style: const TextStyle(fontSize: 12)),
+          Text(
+              'Licencia: ${_tipoLicencia == null ? 'ELIMINADA' : _tipoLicencia.toString().toUpperCase()}',
+              style: const TextStyle(fontSize: 12)),
+          const SizedBox(height: 2),
+          Row(children: [
+            Text(
+              'Estado: ${_estadoLicencia == null ? 'ELIMINADA' : _estadoLicencia.toString().toUpperCase()}',
+              style: TextStyle(
+                fontSize: 12,
+                color: Colors.black,
+              ),
+            ),
+            const SizedBox(width: 2),
+            if (_estadoLicencia == 'expirada' || _estadoLicencia == 'revocada')
+              const Icon(Icons.warning, size: 14, color: Colors.black),
+          ]),
         ]),
         actions: [
           IconButton(
-            onPressed: _fetchUsuarios,
-            tooltip: 'Refrescar',
-            icon: const Icon(Icons.refresh),
-          ),
+              onPressed: () async {
+                await _fetchUsuarios();
+                await _fetchLicense();
+              },
+              tooltip: 'Refrescar',
+              icon: const Icon(Icons.refresh)),
           IconButton(
-            onPressed: _logoutAndGoToLogin,
+            onPressed: () => logoutAndNavigate(
+              context: context,
+              storage: _storage,
+              loginPage: const SuperUserLoginScreen(),
+            ),
             icon: const Icon(Icons.logout),
-            tooltip: 'Cerrar sesión',
-          ),
+          )
         ],
       ),
       floatingActionButton: FloatingActionButton.extended(

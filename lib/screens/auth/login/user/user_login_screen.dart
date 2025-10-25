@@ -66,7 +66,10 @@ class _UserLoginScreenState extends State<UserLoginScreen> {
         Navigator.pushReplacementNamed(
           context,
           UserDashboard.routeName,
-          arguments: {'superUser': superUser},
+          arguments: {
+            'usuario': usuario,
+            'superUser': superUser,
+          },
         );
         return;
       }
@@ -121,7 +124,7 @@ class _UserLoginScreenState extends State<UserLoginScreen> {
               return null;
             },
           ),
-          SizedBox(height: SizeConfig.screenHeight * 0.03),
+          SizedBox(height: SizeConfig.screenHeight * 0.01),
           CustomTextFormField(
             controller: professionalPasswordController,
             labelText: 'Contraseña',

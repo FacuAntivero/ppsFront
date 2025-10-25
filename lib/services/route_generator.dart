@@ -23,7 +23,15 @@ class RouteGenerator {
         );
 
       case UserDashboard.routeName:
-        return MaterialPageRoute(builder: (_) => const UserDashboard());
+        final args = settings.arguments as Map<String, dynamic>? ?? {};
+        final usuario = args['usuario'] as String? ?? '';
+        final superUser = args['superUser'] as String? ?? '';
+        return MaterialPageRoute(
+          builder: (_) => UserDashboard(
+            usuario: usuario,
+            superUser: superUser,
+          ),
+        );
 
       case AdminDashboard.routeName:
         return MaterialPageRoute(builder: (_) => const AdminDashboard());

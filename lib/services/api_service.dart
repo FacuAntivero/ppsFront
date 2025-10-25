@@ -44,7 +44,7 @@ class ApiService {
     required String licenseKey,
   }) async {
     try {
-      final resp = await dio.post('/superuser', data: {
+      final resp = await dio.post('/superusers/register', data: {
         'superUser': superUser,
         'password': password,
         'confirmPassword': password,
@@ -148,6 +148,82 @@ class ApiService {
     } catch (e) {
       return {'success': false, 'error': e.toString()};
     }
+  }
+
+// Headers helper
+  Options _adminOptions({String? adminUser, String? adminPass}) {
+    final headers = <String, String>{};
+    if (adminUser != null) headers['x-admin-user'] = adminUser;
+    if (adminPass != null) headers['x-admin-pass'] = adminPass;
+    return Options(headers: headers);
+  }
+
+// Admin: obtener superusers
+  Future<Map<String, dynamic>> adminGetSuperusers(
+      {String? adminUser, String? adminPass}) async {
+    final resp = await dio.get('/admin/superusers',
+        options: _adminOptions(adminUser: adminUser, adminPass: adminPass));
+    return Map<String, dynamic>.from(resp.data);
+  }
+
+// Admin: cambiar contraseña de SuperUser
+  Future<Map<String, dynamic>> adminChangeSuperuserPassword({
+    required String superUser,
+    required String newPassword,
+    String? adminUser,
+    String? adminPass,
+  }) async {
+    final resp = await dio.put(
+      '/admin/superuser/$superUser/password',
+      data: {'newPassword': newPassword},
+      options: _adminOptions(adminUser: adminUser, adminPass: adminPass),
+    );
+    return Map<String, dynamic>.from(resp.data);
+  }
+
+// Generar licencia (admin)
+  Future<Map<String, dynamic>> licenseGenerate({
+    String? tipoLicencia,
+    int? maxUsuarios,
+    String? adminUser,
+    String? adminPass,
+  }) async {
+    final resp = await dio.post(
+      '/license/generate',
+      data: {'tipo_licencia': tipoLicencia, 'max_usuarios': maxUsuarios},
+      options: _adminOptions(adminUser: adminUser, adminPass: adminPass),
+    );
+    return Map<String, dynamic>.from(resp.data);
+  }
+
+// Listar licencias (admin)
+  Future<Map<String, dynamic>> licenseList(
+      {String? adminUser, String? adminPass}) async {
+    final resp = await dio.get('/license',
+        options: _adminOptions(adminUser: adminUser, adminPass: adminPass));
+    return Map<String, dynamic>.from(resp.data);
+  }
+
+// Borrar licencia (admin)
+  Future<Map<String, dynamic>> licenseDelete(
+      {required int id, String? adminUser, String? adminPass}) async {
+    final resp = await dio.delete('/license/$id',
+        options: _adminOptions(adminUser: adminUser, adminPass: adminPass));
+    return Map<String, dynamic>.from(resp.data);
+  }
+
+// Caducar licencia (admin)
+  Future<Map<String, dynamic>> licenseExpire(
+      {required int id, String? adminUser, String? adminPass}) async {
+    final resp = await dio.put('/license/$id/expire',
+        options: _adminOptions(adminUser: adminUser, adminPass: adminPass));
+    return Map<String, dynamic>.from(resp.data);
+  }
+
+  Future<Map<String, dynamic>> getActiveLicense(String superUser) async {
+    final resp = await dio
+        .get('/license/active', queryParameters: {'superUser': superUser});
+    return Map<String, dynamic>.from(resp.data);
   }
 
   // helper: crear instancia singleton si querés
