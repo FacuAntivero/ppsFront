@@ -1,6 +1,7 @@
 import 'package:dio/dio.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_application/components/form_texts.dart';
+import 'package:flutter_application/components/responsive_login_layout.dart';
 import 'package:flutter_application/constants/size_config.dart';
 import 'package:flutter_application/services/api_service.dart';
 import 'package:flutter_secure_storage/flutter_secure_storage.dart';
@@ -123,10 +124,6 @@ class _SignUpScreenState extends State<SignUpScreen> {
       setState(() {
         _isValidating = false;
       });
-
-      if (_licenseValid && _formKey.currentState != null) {
-        _formKey.currentState!.validate();
-      }
     }
   }
 
@@ -181,29 +178,22 @@ class _SignUpScreenState extends State<SignUpScreen> {
                 const EdgeInsets.symmetric(horizontal: 32.0, vertical: 16.0),
             child: LayoutBuilder(
               builder: (context, constraints) {
-                final isDesktop = constraints.maxWidth > 800;
-                if (isDesktop) {
-                  return Row(
-                    mainAxisAlignment: MainAxisAlignment.center,
-                    crossAxisAlignment: CrossAxisAlignment.center,
-                    children: [
-                      Expanded(
-                        flex: 2,
-                        child: Image.asset(
-                          'assets/images/LogoCircular.png',
-                          fit: BoxFit.contain,
-                        ),
-                      ),
-                      const SizedBox(width: 60),
-                      SizedBox(
-                        width: 450,
-                        child: buildSignUpForm(),
-                      ),
-                    ],
-                  );
-                } else {
-                  return buildSignUpForm(isMobile: true);
-                }
+                return Row(
+                  mainAxisAlignment: MainAxisAlignment.center,
+                  crossAxisAlignment: CrossAxisAlignment.center,
+                  children: [
+                    SizedBox(height: SizeConfig.screenHeight * 0.05),
+                    ResponsiveLoginLayout(
+                      form: buildSignUpForm(isMobile: false),
+                      imageAsset: 'assets/images/LogoCircular.png',
+                      formWidth: 450,
+                      imageMaxWidthFraction: 0.35,
+                      imageMaxWidthPx: 360,
+                      spacing: 60,
+                      desktopBreakpoint: 600,
+                    ),
+                  ],
+                );
               },
             ),
           ),
@@ -251,70 +241,83 @@ class _SignUpScreenState extends State<SignUpScreen> {
             },
           ),
           SizedBox(height: SizeConfig.screenHeight * 0.01),
-          Column(
+          Row(
             crossAxisAlignment: CrossAxisAlignment.start,
             children: [
-              Row(
-                crossAxisAlignment: CrossAxisAlignment.center,
-                mainAxisAlignment: MainAxisAlignment.center,
-                children: [
-                  Expanded(
-                    child: CustomTextFormField(
-                      controller: licenseController,
-                      labelText: 'Licencia',
-                      prefixIcon: Icons.fingerprint,
-                      suffixIcon: _isValidating
-                          ? null
-                          : (_licenseInfo?.startsWith('Licencia:') == true
-                              ? const Icon(Icons.check_circle,
-                                  color: Colors.green)
-                              : null),
-                      validator: (v) {
-                        if (v == null || v.length < 6) {
-                          return 'Min 6 caracteres';
-                        }
-                        return null;
-                      },
-                    ),
+              Expanded(
+                child: CustomTextFormField(
+                  controller: licenseController,
+                  labelText: 'Licencia',
+                  prefixIcon: Icons.fingerprint,
+                  suffixIcon: _isValidating
+                      ? null
+                      : (_licenseInfo?.startsWith('Licencia:') == true
+                          ? const Icon(Icons.check_circle, color: Colors.green)
+                          : null),
+                  validator: (v) {
+                    if (v == null || v.length < 6) {
+                      return 'Min 6 caracteres';
+                    }
+                    return null;
+                  },
+                ),
+              ),
+              const SizedBox(width: 8),
+              SizedBox(
+                height: 40,
+                child: ElevatedButton(
+                  onPressed: _isValidating ? null : _validateLicense,
+                  style: ElevatedButton.styleFrom(
+                    backgroundColor: Colors.teal,
+                    padding: const EdgeInsets.symmetric(horizontal: 16),
+                    minimumSize: const Size(0, 40),
+                    shape: RoundedRectangleBorder(
+                        borderRadius: BorderRadius.circular(8)),
                   ),
-                  const SizedBox(width: 8),
-                  ElevatedButton(
-                    onPressed: _isValidating ? null : _validateLicense,
-                    style: ElevatedButton.styleFrom(
-                      backgroundColor: Colors.teal,
-                      padding: const EdgeInsets.symmetric(
-                          horizontal: 16, vertical: 15),
-                      shape: RoundedRectangleBorder(
-                          borderRadius: BorderRadius.circular(8)),
+                  child: _isValidating
+                      ? const SizedBox(
+                          height: 20,
+                          width: 20,
+                          child: CircularProgressIndicator(
+                              color: Colors.white, strokeWidth: 2))
+                      : const Text('Validar',
+                          style: TextStyle(
+                              color: Colors.white,
+                              fontWeight: FontWeight.bold)),
+                ),
+              ),
+            ],
+          ),
+          if (_licenseInfo != null)
+            Padding(
+              padding: const EdgeInsets.only(top: 4.0, left: 12.0),
+              child: Row(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  Icon(
+                    _licenseValid
+                        ? Icons.check_circle_outline
+                        : Icons.error_outline,
+                    size: 16,
+                    color: _licenseValid
+                        ? Colors.green.shade700
+                        : Colors.red.shade700,
+                  ),
+                  const SizedBox(width: 6),
+                  Expanded(
+                    child: Text(
+                      _licenseInfo!,
+                      style: TextStyle(
+                        fontSize: 12,
+                        color: _licenseValid
+                            ? Colors.green.shade700 // 🟢 Válida
+                            : Colors.red.shade700, // 🔴 Inválida/Error
+                      ),
                     ),
-                    child: _isValidating
-                        ? const SizedBox(
-                            height: 20,
-                            width: 20,
-                            child: CircularProgressIndicator(
-                                color: Colors.white, strokeWidth: 2))
-                        : const Text('Validar',
-                            style: TextStyle(
-                                color: Colors.white,
-                                fontWeight: FontWeight.bold)),
                   ),
                 ],
               ),
-              if (_licenseInfo != null)
-                Padding(
-                  padding: const EdgeInsets.only(top: 0, left: 12.0),
-                  child: Text(
-                    _licenseInfo!,
-                    style: TextStyle(
-                      fontSize: 12,
-                      color: _licenseValid
-                          ? Colors.green.shade700 // 🟢 Válida
-                          : Colors.red.shade700, // 🔴 Inválida/Error
-                    ),
-                  ),
-                ),
-            ],
-          ),
+            ),
 
           SizedBox(height: SizeConfig.screenHeight * 0.01),
 
@@ -354,10 +357,11 @@ class _SignUpScreenState extends State<SignUpScreen> {
                   () => _isConfirmPasswordVisible = !_isConfirmPasswordVisible),
             ),
             validator: (v) {
-              if (v == null || v != passwordController.text) {
+              if (v == null || v.length < 6) {
+                return 'Min 6 caracteres';
+              } else if (v != passwordController.text) {
                 return 'No coincide';
               }
-
               return null;
             },
           ),
@@ -366,13 +370,8 @@ class _SignUpScreenState extends State<SignUpScreen> {
 
           // Botón registrar: requiere que el form sea válido y que la licencia haya sido validada
           ElevatedButton(
-            onPressed: (_isCreating ||
-                    !_licenseValid || // Usamos la variable _licenseValid
-                    nameController.text.trim().length < 3 ||
-                    passwordController.text.length < 6 ||
-                    passwordController.text != confirmPasswordController.text)
-                ? null
-                : _onRegisterPressed,
+            onPressed:
+                (_isCreating || !_licenseValid) ? null : _onRegisterPressed,
             style: ElevatedButton.styleFrom(
               backgroundColor: Colors.teal,
               shape: RoundedRectangleBorder(

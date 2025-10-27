@@ -112,8 +112,7 @@ class _SuperUserLoginScreenState extends State<SuperUserLoginScreen> {
             child: Column(
               children: [
                 ToggleButtons(
-                  isSelected:
-                      _toggleSelected, // debe ser [true, false] en initState
+                  isSelected: _toggleSelected,
                   onPressed: (index) {
                     setState(() {
                       for (int i = 0; i < _toggleSelected.length; i++) {
@@ -178,13 +177,13 @@ class _SuperUserLoginScreenState extends State<SuperUserLoginScreen> {
           if (isMobile)
             Center(
               child: SizedBox(
-                height: SizeConfig.screenWidth * 0.4,
-                width: SizeConfig.screenWidth * 0.4,
+                height: SizeConfig.screenWidth * 0.3,
+                width: SizeConfig.screenWidth * 0.3,
                 child: Image.asset('assets/images/LogoCircular.png',
                     fit: BoxFit.cover),
               ),
             ),
-          if (isMobile) SizedBox(height: SizeConfig.screenHeight * 0.05),
+          if (isMobile) SizedBox(height: SizeConfig.screenHeight * 0.04),
 
           // Usuario (residencia)
           CustomTextFormField(
@@ -216,9 +215,8 @@ class _SuperUserLoginScreenState extends State<SuperUserLoginScreen> {
               return null;
             },
           ),
-          SizedBox(height: SizeConfig.screenHeight * 0.02),
+          //SizedBox(height: SizeConfig.screenHeight * 0.01),
 
-          // Remember + other controls (your custom widget)
           CommonFormWidgets(
             isMobile: isMobile,
             rememberMeValue: rememberUserName,

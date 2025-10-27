@@ -124,7 +124,7 @@ class _UserLoginScreenState extends State<UserLoginScreen> {
               return null;
             },
           ),
-          SizedBox(height: SizeConfig.screenHeight * 0.01),
+          //SizedBox(height: SizeConfig.screenHeight * 0.01),
           CustomTextFormField(
             controller: professionalPasswordController,
             labelText: 'Contraseña',
