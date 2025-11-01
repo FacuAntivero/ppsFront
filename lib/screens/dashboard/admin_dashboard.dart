@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_application/dialogs/change_password.dialog.dart';
 import 'package:flutter_application/dialogs/delete_license_dialog.dart';
+import 'package:flutter_application/dialogs/configure_license_dialog.dart';
 import 'package:flutter_application/screens/auth/login/superuser/superuser_login_screen.dart';
 import 'package:flutter_application/services/api_service.dart';
 import 'package:flutter_application/utils/auth_utils.dart';
@@ -117,21 +118,23 @@ class _AdminDashboardState extends State<AdminDashboard> {
   }
 
   Future<void> _onChangeSuperuserPassword(String su) async {
-    final newPass = await showDialog<String>(
+    final result = await showDialog<Map<String, String>>(
       context: context,
-      builder: (ctx) => ChangePasswordDialog(superUser: su),
+      builder: (ctx) => ReusablePasswordDialog(
+        title: 'Cambiar contraseña de: $su',
+        description:
+            'Introduce la nueva contraseña para esta Residencia y confírmala.',
+        submitButtonText: 'Cambiar',
+        requireCurrentPassword:
+            false, // <-- CLAVE: Admin no necesita pass actual
+      ),
     );
 
-    // Si el usuario canceló o la validación interna falló
-    if (newPass == null || newPass.isEmpty) {
-      return;
-    }
+    if (result == null) return; // Usuario canceló
 
-    if (newPass.length < 6) {
-      if (!mounted) return;
-      ScaffoldMessenger.of(context).showSnackBar(const SnackBar(
-          content:
-              Text('Error: La contraseña debe tener al menos 6 caracteres')));
+    final newPass = result['new']; // Solo nos interesa la 'new'
+
+    if (newPass == null || newPass.isEmpty) {
       return;
     }
 
@@ -160,20 +163,18 @@ class _AdminDashboardState extends State<AdminDashboard> {
             content:
                 Text('✅ Contraseña del Superusuario actualizada con éxito')));
       } else {
-        // Manejo de errores específicos del servidor
         final errorMessage =
             resp['error']?.toString() ?? 'Error desconocido del servidor';
         ScaffoldMessenger.of(context).showSnackBar(SnackBar(
             content: Text('❌ Error al cambiar la contraseña: $errorMessage')));
       }
     } catch (e) {
-      // Manejo de errores de red o excepciones
       if (!mounted) return;
       ScaffoldMessenger.of(context).showSnackBar(SnackBar(
-          content: Text('⚠️ Fallo en la conexión o API: ${e.toString()}')));
+          content: Text('⚠️ Fallo en la conexión o API: $e.toString()')));
     } finally {
       if (!mounted) return;
-      setState(() => loading = false); // Desactiva el indicador de carga
+      setState(() => loading = false);
     }
   }
 
@@ -230,123 +231,114 @@ class _AdminDashboardState extends State<AdminDashboard> {
     );
   }
 
+  Future<void> _onDeleteSuperUser(String su) async {
+    // 1. Pedir Confirmación (¡MUY IMPORTANTE!)
+    final bool? confirmed = await showDialog<bool>(
+      context: context,
+      builder: (context) {
+        return AlertDialog(
+          shape:
+              RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
+          title: const Row(
+            children: [
+              Icon(Icons.warning_amber_rounded, color: Colors.red),
+              SizedBox(width: 10),
+              Text('Confirmar eliminación'),
+            ],
+          ),
+          content: Text(
+              '¿Estás seguro de que quieres eliminar a "$su"?\n\nEsta acción también eliminará todas sus licencias asociadas y no se puede deshacer.'),
+          actions: [
+            TextButton(
+              onPressed: () => Navigator.pop(context, false),
+              child: const Text('Cancelar'),
+            ),
+            ElevatedButton(
+              onPressed: () => Navigator.pop(context, true),
+              style: ElevatedButton.styleFrom(backgroundColor: Colors.red),
+              child:
+                  const Text('Eliminar', style: TextStyle(color: Colors.white)),
+            ),
+          ],
+        );
+      },
+    );
+
+    // Si el usuario presiona "Cancelar", confirmed será false o null
+    if (confirmed != true) return;
+
+    // 2. Verificación de credenciales (tu lógica)
+    if (adminUser == null || adminPass == null) {
+      if (!mounted) return;
+      ScaffoldMessenger.of(context).showSnackBar(const SnackBar(
+          content:
+              Text('Error: Credenciales de administrador no disponibles.')));
+      return;
+    }
+
+    if (!mounted) return;
+    setState(() => loading = true);
+
+    // 3. Lógica de API
+    try {
+      final resp = await api.deleteSuperUser(
+        superUser: su,
+        adminUser: adminUser!,
+        adminPass: adminPass!,
+      );
+
+      if (!mounted) return;
+      if (resp['success'] == true) {
+        ScaffoldMessenger.of(context).showSnackBar(const SnackBar(
+          content: Text('✅ Residencia eliminada correctamente'),
+          backgroundColor: Colors.green,
+        ));
+        await _fetchAll(); // Recargar la lista de residencias
+      } else {
+        final errorMessage = resp['error']?.toString() ?? 'Error desconocido';
+        ScaffoldMessenger.of(context).showSnackBar(SnackBar(
+          content: Text('❌ Error al eliminar: $errorMessage'),
+          backgroundColor: Colors.red,
+        ));
+      }
+    } catch (e) {
+      if (!mounted) return;
+      ScaffoldMessenger.of(context).showSnackBar(SnackBar(
+        content: Text('⚠️ Fallo en la conexión o API: $e.toString()'),
+        backgroundColor: Colors.red,
+      ));
+    } finally {
+      if (!mounted) return;
+      setState(() => loading = false);
+    }
+  }
+
   Future<void> _onGenerateLicense() async {
     if (adminUser == null || adminPass == null) {
       if (!mounted) return;
       ScaffoldMessenger.of(context).showSnackBar(const SnackBar(
           content: Text(
               'Error: Credenciales de administrador no cargadas. ¡Inicia sesión!')));
-      return; // Detiene la función si faltan credenciales
+      return;
     }
+    final result = await showDialog<Map<String, String>>(
+      context: context,
+      builder: (context) => const ConfigureLicenseDialog(
+        title: 'Generar licencia de Acceso',
+        submitButtonText: 'Generar',
+      ),
+    );
 
-    String selectedTipo = 'basica';
+    if (result == null) return; // Usuario canceló
+
+    final String selectedTipo = result['tipo'] ?? 'basica';
+    final String maxText = result['max'] ?? '';
     int? maxUsuarios;
 
-    // Usamos una clave para el formulario del diálogo para validación
-    final dialogFormKey = GlobalKey<FormState>();
-
-    final result = await showDialog<Map<String, dynamic>>(
-      context: context,
-      builder: (ctx) {
-        String tipo = 'basica';
-        final ctrlMax = TextEditingController();
-
-        return AlertDialog(
-          // Estilo de diálogo más moderno
-          shape:
-              RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
-          title: const Text('Generar licencia de Acceso',
-              style:
-                  TextStyle(fontWeight: FontWeight.bold, color: Colors.teal)),
-          content: Form(
-            key: dialogFormKey, // Adjuntamos la clave de validación aquí
-            child: Column(
-              mainAxisSize: MainAxisSize.min,
-              children: [
-                // Dropdown con acento visual
-                DropdownButtonFormField<String>(
-                  initialValue: tipo,
-                  decoration: InputDecoration(
-                    labelText: 'Tipo de Licencia',
-                    border: OutlineInputBorder(
-                      borderRadius: BorderRadius.circular(10),
-                    ),
-                    prefixIcon: const Icon(Icons.star, color: Colors.amber),
-                  ),
-                  items: const [
-                    DropdownMenuItem(
-                        value: 'basica', child: Text('Básica (3 usuarios)')),
-                    DropdownMenuItem(
-                        value: 'mediana', child: Text('Mediana (7 usuarios)')),
-                    DropdownMenuItem(
-                        value: 'pro', child: Text('Pro (10 usuarios)')),
-                    DropdownMenuItem(
-                        value: 'custom', child: Text('Personalizada (Custom)')),
-                  ],
-                  onChanged: (v) {
-                    if (v != null) tipo = v;
-                  },
-                ),
-                const SizedBox(height: 16),
-
-                // Campo de texto con validación y estilo mejorado
-                TextFormField(
-                  controller: ctrlMax,
-                  keyboardType: TextInputType.number,
-                  decoration: InputDecoration(
-                    labelText: 'Máx. Usuarios (Opcional)',
-                    hintText: 'Ej. 25 o déjalo vacío',
-                    border: OutlineInputBorder(
-                      borderRadius: BorderRadius.circular(10),
-                    ),
-                    prefixIcon: const Icon(Icons.people),
-                  ),
-                  // Validación simple para asegurar que es un número entero positivo o vacío
-                  validator: (v) {
-                    if (v == null || v.trim().isEmpty) return null;
-                    if (int.tryParse(v.trim()) == null) {
-                      return 'Debe ser un número entero.';
-                    }
-                    if (int.parse(v.trim()) < 1) {
-                      return 'Mínimo 1 usuario.';
-                    }
-                    return null;
-                  },
-                ),
-              ],
-            ),
-          ),
-          actions: [
-            TextButton(
-                onPressed: () => Navigator.pop(ctx, null),
-                child: const Text('Cancelar',
-                    style: TextStyle(color: Colors.grey))),
-            ElevatedButton(
-                // Solo se permite presionar si el formulario es válido (solo aplica al TextFormField)
-                onPressed: () {
-                  if (dialogFormKey.currentState!.validate()) {
-                    Navigator.pop(ctx, {'tipo': tipo, 'max': ctrlMax.text});
-                  }
-                },
-                style: ElevatedButton.styleFrom(
-                  backgroundColor: Colors.teal, // Color de acento
-                  shape: RoundedRectangleBorder(
-                      borderRadius: BorderRadius.circular(8)),
-                ),
-                child: const Text('Generar',
-                    style: TextStyle(color: Colors.white))),
-          ],
-        );
-      },
-    );
-    if (result == null) return;
-
-    selectedTipo = (result['tipo'] as String?) ?? 'basica';
-    final maxText = (result['max'] as String?) ?? '';
     if (maxText.trim().isNotEmpty) {
       maxUsuarios = int.tryParse(maxText.trim());
     } else {
-      maxUsuarios = null; // Mantiene el valor por defecto del backend
+      maxUsuarios = null;
     }
 
     setState(() => loading = true);
@@ -361,11 +353,10 @@ class _AdminDashboardState extends State<AdminDashboard> {
     setState(() => loading = false);
 
     if (resp['success'] == true) {
-      final key = resp['licenseKey'];
-
+      final key = resp['licenseKey'] ?? 'ERROR_SIN_KEY';
       await _showLicenseKeyDialog(key);
-
       if (!mounted) return;
+      await _fetchAll();
     } else {
       if (!mounted) return;
       ScaffoldMessenger.of(context).showSnackBar(SnackBar(
@@ -383,6 +374,7 @@ class _AdminDashboardState extends State<AdminDashboard> {
     final tipo = s['tipo_licencia'] ?? '-';
     var estado = s['licencia_estado'] ?? 'revocada';
     final fechaExp = s['fecha_expiracion'] as String?;
+    final bool isProtectedAdmin = (name == "admin");
 
     if (estado == 'revocada' && name == 'admin') {
       estado = "-";
@@ -414,7 +406,6 @@ class _AdminDashboardState extends State<AdminDashboard> {
           children: [
             const SizedBox(height: 4),
             Text('Max usuarios: $max'),
-            const SizedBox(height: 4),
             Row(
               children: [
                 Text('Licencia ID: $idLicense'),
@@ -434,10 +425,26 @@ class _AdminDashboardState extends State<AdminDashboard> {
               Text('Vence: $fechaExp', style: const TextStyle(fontSize: 12)),
           ],
         ),
-        trailing: IconButton(
-          icon: const Icon(Icons.vpn_key),
-          tooltip: 'Cambiar contraseña',
-          onPressed: () => _onChangeSuperuserPassword(name),
+        trailing: Row(
+          mainAxisSize: MainAxisSize.min,
+          children: [
+            IconButton(
+              icon: Icon(
+                Icons.delete_forever,
+                color: isProtectedAdmin ? Colors.grey : Colors.red,
+              ),
+              tooltip: isProtectedAdmin
+                  ? 'No se puede eliminar la cuenta de admin'
+                  : 'Borrar Residencia',
+              onPressed:
+                  isProtectedAdmin ? null : () => _onDeleteSuperUser(name),
+            ),
+            IconButton(
+              icon: const Icon(Icons.vpn_key, color: Colors.blue),
+              tooltip: 'Cambiar contraseña',
+              onPressed: () => _onChangeSuperuserPassword(name),
+            ),
+          ],
         ),
       ),
     );
@@ -448,6 +455,7 @@ class _AdminDashboardState extends State<AdminDashboard> {
     final estado = l['estado'] ?? '-';
     final id = l['id_license'];
     final exp = l['fecha_expiracion'] ?? '-';
+    final int? maxUsers = l['max_usuarios'];
     return Card(
       child: ListTile(
         title: Text('ID $id — ${tipo.toString().toUpperCase()}'),
@@ -457,7 +465,7 @@ class _AdminDashboardState extends State<AdminDashboard> {
         trailing: Row(mainAxisSize: MainAxisSize.min, children: [
           IconButton(
               tooltip: 'Borrar licencia',
-              icon: const Icon(Icons.delete),
+              icon: const Icon(Icons.delete_forever, color: Colors.red),
               onPressed: () async {
                 final ok = await showDialog<bool>(
                     context: context,
@@ -466,7 +474,6 @@ class _AdminDashboardState extends State<AdminDashboard> {
                           licenseType: tipo,
                         ));
                 if (ok == true) {
-                  // Verificación de credenciales
                   if (adminUser == null || adminPass == null) {
                     if (!mounted) return;
                     ScaffoldMessenger.of(context).showSnackBar(const SnackBar(
@@ -493,12 +500,18 @@ class _AdminDashboardState extends State<AdminDashboard> {
               tooltip: 'Caducar licencia',
               icon: const Icon(Icons.hourglass_disabled),
               onPressed: () async {
-                // Verificación de credenciales
                 if (adminUser == null || adminPass == null) {
                   if (!mounted) return;
                   ScaffoldMessenger.of(context).showSnackBar(const SnackBar(
                       content: Text(
                           'Error: No se puede expirar la licencia sin credenciales de admin.')));
+                  return;
+                }
+
+                if (estado == 'expirada') {
+                  if (!mounted) return;
+                  ScaffoldMessenger.of(context).showSnackBar(const SnackBar(
+                      content: Text('La licencia ya está expirada.')));
                   return;
                 }
 
@@ -514,6 +527,91 @@ class _AdminDashboardState extends State<AdminDashboard> {
                       content: Text(resp['error']?.toString() ?? 'Error')));
                 }
               }),
+
+// Botón Renovar (Icono azul)
+          IconButton(
+            icon: const Icon(Icons.autorenew, color: Colors.blue),
+            tooltip: 'Renovar (+1 Año)',
+            onPressed: () async {
+              if (adminUser == null || adminPass == null) {
+                if (!mounted) return;
+                ScaffoldMessenger.of(context).showSnackBar(const SnackBar(
+                    content:
+                        Text('Error: Credenciales de admin no disponibles.')));
+                return;
+              }
+
+              final resp = await api.licenseRenew(
+                  id: id, adminUser: adminUser, adminPass: adminPass);
+
+              if (!mounted) return;
+              if (resp['success'] == true) {
+                ScaffoldMessenger.of(context).showSnackBar(const SnackBar(
+                    content: Text('Licencia renovada por 1 año')));
+                await _fetchAll(); // Recargar datos
+              } else {
+                ScaffoldMessenger.of(context).showSnackBar(SnackBar(
+                    content:
+                        Text(resp['error']?.toString() ?? 'Error al renovar')));
+              }
+            },
+          ),
+
+// Botón Modificar Tipo (Icono morado)
+          IconButton(
+            icon: const Icon(Icons.edit, color: Colors.purple),
+            tooltip: 'Modificar Tipo/Usuarios',
+            onPressed: () async {
+              final result = await showDialog<Map<String, String>>(
+                context: context,
+                builder: (context) => ConfigureLicenseDialog(
+                  title: 'Modificar Licencia',
+                  submitButtonText: 'Guardar',
+                  initialType: tipo,
+                  initialMaxUsers: maxUsers,
+                ),
+              );
+
+              if (result == null) return;
+
+              if (adminUser == null || adminPass == null) {
+                if (!mounted) return;
+                ScaffoldMessenger.of(context).showSnackBar(const SnackBar(
+                    content:
+                        Text('Error: Credenciales de admin no disponibles.')));
+                return;
+              }
+
+              final String newType = result['tipo'] ?? 'basica';
+              final String maxText = result['max'] ?? '';
+
+              int? newMaxUsers;
+              if (maxText.trim().isNotEmpty) {
+                newMaxUsers = int.tryParse(maxText.trim());
+              } else {
+                newMaxUsers = null;
+              }
+
+              final resp = await api.licenseModifyType(
+                id: id,
+                newType: newType,
+                maxUsers: newMaxUsers,
+                adminUser: adminUser,
+                adminPass: adminPass,
+              );
+
+              if (!mounted) return;
+              if (resp['success'] == true) {
+                ScaffoldMessenger.of(context).showSnackBar(const SnackBar(
+                    content: Text('Tipo de licencia modificado')));
+                await _fetchAll(); // Recargar datos
+              } else {
+                ScaffoldMessenger.of(context).showSnackBar(SnackBar(
+                    content: Text(
+                        resp['error']?.toString() ?? 'Error al modificar')));
+              }
+            },
+          ),
         ]),
       ),
     );

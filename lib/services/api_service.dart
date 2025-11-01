@@ -226,6 +226,76 @@ class ApiService {
     return Map<String, dynamic>.from(resp.data);
   }
 
+  /// Renueva una licencia (+1 año y activa)
+  Future<Map<String, dynamic>> licenseRenew(
+      {required int id, String? adminUser, String? adminPass}) async {
+    final resp = await dio.put('/license/$id/renew', // <- PUT y nueva ruta
+        options: _adminOptions(adminUser: adminUser, adminPass: adminPass));
+    return Map<String, dynamic>.from(resp.data);
+  }
+
+  /// Modifica el tipo y/o max_usuarios de una licencia
+  Future<Map<String, dynamic>> licenseModifyType(
+      {required int id,
+      required String newType,
+      int? maxUsers,
+      String? adminUser,
+      String? adminPass}) async {
+    final resp = await dio.put(
+      // <- PUT y nueva ruta
+      '/license/$id/modify-type',
+      data: {
+        'tipo_licencia': newType,
+        'max_usuarios': maxUsers,
+      },
+      options: _adminOptions(adminUser: adminUser, adminPass: adminPass),
+    );
+    return Map<String, dynamic>.from(resp.data);
+  }
+
+  /// Borra un SuperUser (Residencia) y todas sus licencias asociadas.
+  Future<Map<String, dynamic>> deleteSuperUser({
+    required String superUser, // El 'name' de la residencia a borrar
+    String? adminUser,
+    String? adminPass,
+  }) async {
+    try {
+      final resp = await dio.delete(
+        '/admin/superuser/$superUser',
+        options: _adminOptions(adminUser: adminUser, adminPass: adminPass),
+      );
+      return Map<String, dynamic>.from(resp.data);
+    } on DioException catch (e) {
+      return e.response?.data ?? {'success': false, 'error': e.message};
+    } catch (e) {
+      return {'success': false, 'error': e.toString()};
+    }
+  }
+
+  /// Llama al backend para obtener la LISTA de todas las sesiones
+  /// (con sus ejercicios y métricas anidados) para un profesional específico.
+  Future<List<dynamic>> fetchSessions(String profesional) async {
+    try {
+      final response = await dio.get('/sessions/$profesional');
+
+      if (response.data is List) {
+        return response.data;
+      } else {
+        throw Exception('El backend no devolvió una lista');
+      }
+    } on DioException catch (e) {
+      print('Error en ApiService.fetchSessions: $e');
+      final errorData = e.response?.data;
+      if (errorData != null && errorData['error'] != null) {
+        throw Exception('Error del servidor: ${errorData['error']}');
+      }
+      throw Exception('Error de red: ${e.message}');
+    } catch (e) {
+      print('Error al fetchear sesiones: $e');
+      throw Exception('Error al obtener datos de sesión: $e');
+    }
+  }
+
   // helper: crear instancia singleton si querés
   static ApiService instance({String? baseUrl}) => ApiService(baseUrl: baseUrl);
 }
