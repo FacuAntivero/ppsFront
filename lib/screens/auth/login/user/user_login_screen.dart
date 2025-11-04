@@ -58,7 +58,6 @@ class _UserLoginScreenState extends State<UserLoginScreen> {
     try {
       final res = await _api.loginUser(usuario: usuario, password: password);
 
-      // comprobación estricta
       if (res['success'] == true) {
         final superUser = (res['superUser'] as String?) ?? '';
 
@@ -88,8 +87,6 @@ class _UserLoginScreenState extends State<UserLoginScreen> {
           : 'Error de conexión o servidor';
       setState(() => _loginError = err);
     } catch (e) {
-      // ignore: avoid_print
-      print('DEBUG unknown error loginUser: $e');
       setState(() => _loginError = 'Error inesperado: $e');
     } finally {
       if (!mounted) return;
@@ -162,11 +159,10 @@ class _UserLoginScreenState extends State<UserLoginScreen> {
             onPressed: _isLoggingIn ? null : _onLoginPressed,
             loading: _isLoggingIn,
             label: 'Iniciar sesión',
-            height: 52, // coincidente con campos
+            height: 52,
           ),
 
-          const SizedBox(
-              height: 44), // <- placeholder que iguala la altura del TextButton
+          const SizedBox(height: 44),
         ],
       ),
     );
@@ -184,8 +180,7 @@ class _UserLoginScreenState extends State<UserLoginScreen> {
             child: Column(
               children: [
                 ToggleButtons(
-                  isSelected:
-                      _toggleSelected, // debe ser [false, true] en initState
+                  isSelected: _toggleSelected,
                   onPressed: (index) {
                     setState(() {
                       for (int i = 0; i < _toggleSelected.length; i++) {

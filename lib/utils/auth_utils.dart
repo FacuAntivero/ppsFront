@@ -1,4 +1,3 @@
-// lib/utils/auth_utils.dart
 import 'package:flutter/material.dart';
 import 'package:flutter_secure_storage/flutter_secure_storage.dart';
 
@@ -35,7 +34,7 @@ Future<bool> logoutAndNavigate({
   );
 
   if (ok != true) return false;
-  // Borra las keys solicitadas (silencioso si no existen)
+  // Borra las keys solicitadas
   for (final k in storageKeys) {
     try {
       await storage.delete(key: k);

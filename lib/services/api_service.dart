@@ -242,7 +242,6 @@ class ApiService {
       String? adminUser,
       String? adminPass}) async {
     final resp = await dio.put(
-      // <- PUT y nueva ruta
       '/license/$id/modify-type',
       data: {
         'tipo_licencia': newType,
@@ -284,18 +283,16 @@ class ApiService {
         throw Exception('El backend no devolvió una lista');
       }
     } on DioException catch (e) {
-      print('Error en ApiService.fetchSessions: $e');
       final errorData = e.response?.data;
       if (errorData != null && errorData['error'] != null) {
         throw Exception('Error del servidor: ${errorData['error']}');
       }
       throw Exception('Error de red: ${e.message}');
     } catch (e) {
-      print('Error al fetchear sesiones: $e');
       throw Exception('Error al obtener datos de sesión: $e');
     }
   }
 
-  // helper: crear instancia singleton si querés
+  // helper: crear instancia singleton
   static ApiService instance({String? baseUrl}) => ApiService(baseUrl: baseUrl);
 }

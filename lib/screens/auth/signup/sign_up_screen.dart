@@ -7,7 +7,6 @@ import 'package:flutter_application/services/api_service.dart';
 import 'package:flutter_secure_storage/flutter_secure_storage.dart';
 
 class SignUpScreen extends StatefulWidget {
-  // Constante para el nombre de la ruta
   static const String routeName = '/signup';
 
   const SignUpScreen({super.key});

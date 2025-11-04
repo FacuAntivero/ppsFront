@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:flutter_application/dialogs/change_password.dialog.dart';
 import 'package:flutter_application/screens/auth/login/superuser/superuser_login_screen.dart';
 import 'package:flutter_application/services/api_service.dart';
+import 'package:flutter_application/widgets/superUser_session_card.dart';
 import 'package:flutter_secure_storage/flutter_secure_storage.dart';
 import 'package:flutter_application/dialogs/add_professional_dialog.dart';
 import 'package:flutter_application/utils/auth_utils.dart';
@@ -26,7 +27,7 @@ class _SuperUserDashboardState extends State<SuperUserDashboard> {
   late final ApiService api;
   bool _loading = true;
   String? _error;
-  List<Map<String, dynamic>> usuarios = []; // cada item: { user, nombreReal }
+  List<Map<String, dynamic>> usuarios = [];
   final _storage = const FlutterSecureStorage();
   String? _tipoLicencia;
   String? _estadoLicencia;
@@ -133,9 +134,9 @@ class _SuperUserDashboardState extends State<SuperUserDashboard> {
     setState(() => _loading = true);
     try {
       final resp = await api.changePassword(
-        superUser: widget.superUser, 
-        superUserPassword: currentPass, 
-        targetUser: targetUser, 
+        superUser: widget.superUser,
+        superUserPassword: currentPass,
+        targetUser: targetUser,
         newPassword: newPass,
       );
 
@@ -164,29 +165,6 @@ class _SuperUserDashboardState extends State<SuperUserDashboard> {
       if (!mounted) return;
       setState(() => _loading = false);
     }
-  }
-
-  Widget _buildUserCard(Map<String, dynamic> u) {
-    final username = u['user']?.toString() ?? '';
-    final nombreReal = u['nombreReal']?.toString() ?? '';
-
-    return Card(
-      elevation: 2,
-      margin: const EdgeInsets.symmetric(vertical: 8, horizontal: 8),
-      shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(10)),
-      child: ListTile(
-        leading: CircleAvatar(
-            child: Text(username.isNotEmpty ? username[0].toUpperCase() : '?')),
-        title: Text(nombreReal.isNotEmpty ? nombreReal : username,
-            overflow: TextOverflow.ellipsis),
-        subtitle: username != nombreReal ? Text(username) : null,
-        trailing: IconButton(
-          icon: const Icon(Icons.vpn_key),
-          tooltip: 'Cambiar contraseña',
-          onPressed: () => _showChangePasswordDialog(username),
-        ),
-      ),
-    );
   }
 
   @override
@@ -259,7 +237,14 @@ class _SuperUserDashboardState extends State<SuperUserDashboard> {
                             itemCount: usuarios.length,
                             itemBuilder: (context, index) {
                               final u = usuarios[index];
-                              return _buildUserCard(u);
+
+                              // Llamamos al widget 'ProfesionalSessionCard'
+                              return ProfesionalSessionCard(
+                                profesionalData: u,
+                                onChangePassword: () =>
+                                    _showChangePasswordDialog(u['user']),
+                                apiService: api,
+                              );
                             },
                           ),
                   ),

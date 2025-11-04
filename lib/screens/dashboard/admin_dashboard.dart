@@ -5,6 +5,7 @@ import 'package:flutter_application/dialogs/configure_license_dialog.dart';
 import 'package:flutter_application/screens/auth/login/superuser/superuser_login_screen.dart';
 import 'package:flutter_application/services/api_service.dart';
 import 'package:flutter_application/utils/auth_utils.dart';
+import 'package:flutter_application/widgets/admin_session_card.dart';
 import 'package:flutter_secure_storage/flutter_secure_storage.dart';
 import 'package:flutter/services.dart';
 
@@ -103,6 +104,7 @@ class _AdminDashboardState extends State<AdminDashboard> {
           ...s,
           'id_license': lic != null ? lic['id_license'] : null,
           'tipo_licencia': lic != null ? lic['tipo_licencia'] : null,
+          'max_usuarios': lic != null ? lic['max_usuarios'] : null,
           'licencia_estado': lic != null ? lic['estado'] : null,
           'fecha_expiracion': lic != null ? lic['fecha_expiracion'] : null,
         };
@@ -232,7 +234,7 @@ class _AdminDashboardState extends State<AdminDashboard> {
   }
 
   Future<void> _onDeleteSuperUser(String su) async {
-    // 1. Pedir Confirmación (¡MUY IMPORTANTE!)
+    // Pedir Confirmación
     final bool? confirmed = await showDialog<bool>(
       context: context,
       builder: (context) {
@@ -267,7 +269,7 @@ class _AdminDashboardState extends State<AdminDashboard> {
     // Si el usuario presiona "Cancelar", confirmed será false o null
     if (confirmed != true) return;
 
-    // 2. Verificación de credenciales (tu lógica)
+    // Verificación de credenciales
     if (adminUser == null || adminPass == null) {
       if (!mounted) return;
       ScaffoldMessenger.of(context).showSnackBar(const SnackBar(
@@ -279,7 +281,7 @@ class _AdminDashboardState extends State<AdminDashboard> {
     if (!mounted) return;
     setState(() => loading = true);
 
-    // 3. Lógica de API
+    // Lógica de API
     try {
       final resp = await api.deleteSuperUser(
         superUser: su,
@@ -363,91 +365,6 @@ class _AdminDashboardState extends State<AdminDashboard> {
           content:
               Text(resp['error']?.toString() ?? 'Error generando licencia')));
     }
-  }
-
-  Widget _buildSuperuserCard(Map<String, dynamic> s) {
-    final name = s['superUser'] ?? '';
-    final max = s['cant_usuarios_permitidos'] == null
-        ? 'ilimitado'
-        : s['cant_usuarios_permitidos'].toString();
-    final idLicense = s['id_license']?.toString() ?? '-';
-    final tipo = s['tipo_licencia'] ?? '-';
-    var estado = s['licencia_estado'] ?? 'revocada';
-    final fechaExp = s['fecha_expiracion'] as String?;
-    final bool isProtectedAdmin = (name == "admin");
-
-    if (estado == 'revocada' && name == 'admin') {
-      estado = "-";
-    }
-
-    Color estadoColor;
-    switch (estado) {
-      case 'activa':
-        estadoColor = Colors.green;
-        break;
-      case 'expirada':
-        estadoColor = Colors.orange;
-        break;
-      case 'revocada':
-        estadoColor = Colors.red;
-        break;
-      case 'pendiente':
-        estadoColor = Colors.blueGrey;
-        break;
-      default:
-        estadoColor = Colors.grey;
-    }
-
-    return Card(
-      child: ListTile(
-        title: Text(name),
-        subtitle: Column(
-          crossAxisAlignment: CrossAxisAlignment.start,
-          children: [
-            const SizedBox(height: 4),
-            Text('Max usuarios: $max'),
-            Row(
-              children: [
-                Text('Licencia ID: $idLicense'),
-                const SizedBox(width: 12),
-                Text('Tipo: $tipo'),
-                const SizedBox(width: 12),
-                Chip(
-                  label:
-                      Text(estado, style: const TextStyle(color: Colors.white)),
-                  backgroundColor: estadoColor,
-                  visualDensity: VisualDensity.compact,
-                  materialTapTargetSize: MaterialTapTargetSize.shrinkWrap,
-                ),
-              ],
-            ),
-            if (fechaExp != null)
-              Text('Vence: $fechaExp', style: const TextStyle(fontSize: 12)),
-          ],
-        ),
-        trailing: Row(
-          mainAxisSize: MainAxisSize.min,
-          children: [
-            IconButton(
-              icon: Icon(
-                Icons.delete_forever,
-                color: isProtectedAdmin ? Colors.grey : Colors.red,
-              ),
-              tooltip: isProtectedAdmin
-                  ? 'No se puede eliminar la cuenta de admin'
-                  : 'Borrar Residencia',
-              onPressed:
-                  isProtectedAdmin ? null : () => _onDeleteSuperUser(name),
-            ),
-            IconButton(
-              icon: const Icon(Icons.vpn_key, color: Colors.blue),
-              tooltip: 'Cambiar contraseña',
-              onPressed: () => _onChangeSuperuserPassword(name),
-            ),
-          ],
-        ),
-      ),
-    );
   }
 
   Widget _buildLicenseCard(Map<String, dynamic> l) {
@@ -604,7 +521,7 @@ class _AdminDashboardState extends State<AdminDashboard> {
               if (resp['success'] == true) {
                 ScaffoldMessenger.of(context).showSnackBar(const SnackBar(
                     content: Text('Tipo de licencia modificado')));
-                await _fetchAll(); // Recargar datos
+                await _fetchAll();
               } else {
                 ScaffoldMessenger.of(context).showSnackBar(SnackBar(
                     content: Text(
@@ -664,7 +581,25 @@ class _AdminDashboardState extends State<AdminDashboard> {
                         const Text('Residencias',
                             style: TextStyle(
                                 fontSize: 18, fontWeight: FontWeight.bold)),
-                        ...superusers.map(_buildSuperuserCard),
+                        ListView.builder(
+                          shrinkWrap: true,
+                          physics: const NeverScrollableScrollPhysics(),
+                          itemCount: superusers.length,
+                          itemBuilder: (context, index) {
+                            final s = superusers[index];
+                            return ResidenciaExpansionCard(
+                              api: api,
+                              superuserData: s,
+                              adminUser: adminUser, // Pasa las credenciales
+                              adminPass: adminPass, // Pasa las credenciales
+                              onChangePassword: () =>
+                                  _onChangeSuperuserPassword(s['superUser']),
+                              onDeleteSuperUser: () =>
+                                  _onDeleteSuperUser(s['superUser']),
+                              showPatientName: false,
+                            );
+                          },
+                        ),
                         const SizedBox(height: 16),
                         const Text('Licencias',
                             style: TextStyle(

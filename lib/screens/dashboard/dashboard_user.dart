@@ -11,7 +11,7 @@ class UserDashboard extends StatefulWidget {
   static const String routeName = '/user-dashboard';
 
   final String usuario;
-  final String superUser; 
+  final String superUser;
 
   const UserDashboard({
     required this.usuario,
@@ -51,20 +51,15 @@ class _UserDashboardState extends State<UserDashboard> {
     String? firstError;
 
     try {
-      // 1. Llama al ApiService
       final List<dynamic> decodedList =
           await _apiService.fetchSessions(widget.usuario);
 
-      // 2. Parsea la lista de JSONs UNO POR UNO
+      // Parsea la lista de JSONs UNO POR UNO
       for (var item in decodedList) {
         try {
           final sesionData = SesionData.fromJson(item as Map<String, dynamic>);
           loadedSessions.add(sesionData);
-        } catch (e, st) {
-          // Si UNA sesión falla, la reportamos pero continuamos
-          print('Error al parsear UNA sesión: $e');
-          print('Stack trace: $st');
-          print('JSON que falló: $item');
+        } catch (e) {
           firstError ??=
               "Error al parsear la sesión ID: ${item['sesion']?['id'] ?? '??'} - $e";
         }
@@ -75,10 +70,7 @@ class _UserDashboardState extends State<UserDashboard> {
         _error = firstError;
         _isLoading = false;
       });
-    } catch (e, st) {
-      // Error general (API, red)
-      print('Error al cargar datos desde la API: $e');
-      print('Stack trace: $st');
+    } catch (e) {
       setState(() {
         _error = "Error al cargar los datos: $e";
         _isLoading = false;
@@ -180,22 +172,18 @@ class _UserDashboardState extends State<UserDashboard> {
     );
   }
 
-  /// -----------------------------------------------------------------
-  /// 💡 WIDGET DE TARJETA DE SESIÓN (ACTUALIZADO)
-  /// -----------------------------------------------------------------
   Widget _buildSessionCard(SesionData sesionData) {
     if (sesionData.sesion == null) return const SizedBox.shrink();
 
     final sesion = sesionData.sesion!;
 
     // (Verifica si hay datos extra para mostrar)
-    final bool hasExtraData = (sesion.estadoInicial != null &&
-            sesion.estadoInicial!.isNotEmpty &&
-            sesion.estadoInicial != "N/A") ||
-        (sesion.estadoFinal != null &&
-            sesion.estadoFinal!.isNotEmpty &&
-            sesion.estadoFinal != "N/A") ||
-        (sesion.comentarios != null && sesion.comentarios!.isNotEmpty);
+    final bool hasExtraData =
+        (sesion.estadoInicial.isNotEmpty && sesion.estadoInicial != "N/A") ||
+            (sesion.estadoFinal != null &&
+                sesion.estadoFinal!.isNotEmpty &&
+                sesion.estadoFinal != "N/A") ||
+            (sesion.comentarios != null && sesion.comentarios!.isNotEmpty);
 
     return Card(
       elevation: 3,
@@ -222,21 +210,18 @@ class _UserDashboardState extends State<UserDashboard> {
             child: Column(
               crossAxisAlignment: CrossAxisAlignment.start,
               children: [
-                // 💡 --- INICIO DE LA MODIFICACIÓN ---
                 // Mostramos esta sección solo si hay datos que mostrar
                 if (hasExtraData)
                   Padding(
-                    padding: const EdgeInsets.symmetric(
-                        horizontal: 16.0),
+                    padding: const EdgeInsets.symmetric(horizontal: 16.0),
                     child: Column(
                       crossAxisAlignment: CrossAxisAlignment.start,
                       children: [
                         // Mostramos solo los campos que no son nulos ni están vacíos
-                        if (sesion.estadoInicial != null &&
-                            sesion.estadoInicial!.isNotEmpty &&
+                        if (sesion.estadoInicial.isNotEmpty &&
                             sesion.estadoInicial != "N/A")
                           _buildInfoRow(Icons.sentiment_neutral,
-                              'Estado Inicial', sesion.estadoInicial!),
+                              'Estado Inicial', sesion.estadoInicial),
                         if (sesion.estadoFinal != null &&
                             sesion.estadoFinal!.isNotEmpty &&
                             sesion.estadoFinal != "N/A")
@@ -356,8 +341,7 @@ class _UserDashboardState extends State<UserDashboard> {
             children: [
               Container(
                 color: Colors.grey.shade100,
-                constraints:
-                    const BoxConstraints(maxHeight: 200), // Límite de altura
+                constraints: const BoxConstraints(maxHeight: 200),
                 child: ListView(
                   padding: const EdgeInsets.all(12),
                   shrinkWrap: true,

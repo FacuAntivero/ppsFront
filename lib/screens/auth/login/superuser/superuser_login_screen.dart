@@ -27,9 +27,8 @@ class _SuperUserLoginScreenState extends State<SuperUserLoginScreen> {
   bool _isLoggingIn = false;
   String? _loginError;
   ApiService? _api;
-  final _storage =
-      const FlutterSecureStorage(); // para guardar superUser si quisieras
-  final List<bool> _toggleSelected = [true, false]; // estado real del toggle
+  final _storage = const FlutterSecureStorage();
+  final List<bool> _toggleSelected = [true, false];
 
   @override
   void initState() {
