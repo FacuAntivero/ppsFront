@@ -11,7 +11,7 @@ class ReusablePasswordDialog extends StatefulWidget {
     required this.title,
     required this.description,
     this.submitButtonText = "Guardar",
-    this.requireCurrentPassword = false, // Por defecto, solo pide la nueva
+    this.requireCurrentPassword = false,
   });
 
   @override
@@ -42,26 +42,22 @@ class _ReusablePasswordDialogState extends State<ReusablePasswordDialog> {
     final newPass = _passwordController.text.trim();
     final confirmPass = _confirmController.text.trim();
 
-    // 1. Validar contraseña actual (si se requiere)
     if (widget.requireCurrentPassword && currentPass.isEmpty) {
       setState(() => _errorText = 'Debes ingresar tu contraseña actual.');
       return;
     }
 
-    // 2. Validar nueva contraseña
     if (newPass.length < 6) {
       setState(() =>
           _errorText = 'La nueva contraseña debe tener + de 6 caracteres.');
       return;
     }
 
-    // 3. Validar confirmación
     if (newPass != confirmPass) {
       setState(() => _errorText = 'Las nuevas contraseñas no coinciden.');
       return;
     }
 
-    // Si todo es válido, preparamos el resultado
     final Map<String, String> result = {
       'new': newPass,
     };
@@ -70,69 +66,94 @@ class _ReusablePasswordDialogState extends State<ReusablePasswordDialog> {
       result['current'] = currentPass;
     }
 
-    Navigator.pop(context, result); // Devuelve el Map
+    Navigator.pop(context, result);
   }
 
   @override
   Widget build(BuildContext context) {
     final theme = Theme.of(context);
 
+    // 1. Calculamos el ancho responsivo
+    final size = MediaQuery.of(context).size;
+    final double dialogWidth = size.width > 600 ? 400 : size.width * 0.9;
+
+    // 2. Definimos la decoración segura con padding fijo
+    InputDecoration safeDecoration({
+      required String label,
+      String? hintText,
+      required IconData icon,
+      required Widget suffixIcon,
+    }) {
+      return InputDecoration(
+        labelText: label,
+        hintText: hintText,
+        isDense: true,
+        contentPadding:
+            const EdgeInsets.symmetric(horizontal: 16, vertical: 16), // Fijo
+        border: const OutlineInputBorder(),
+        prefixIcon: Icon(icon),
+        suffixIcon: suffixIcon,
+      );
+    }
+
     return AlertDialog(
+      shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
       title: Text(widget.title),
-      content: SingleChildScrollView(
-        child: Column(
-          mainAxisSize: MainAxisSize.min,
-          crossAxisAlignment: CrossAxisAlignment.start,
-          children: [
-            Text(widget.description,
-                style: const TextStyle(fontSize: 14, color: Colors.black54)),
+      contentPadding: const EdgeInsets.fromLTRB(24, 20, 24, 0),
 
-            if (_errorText != null)
-              Padding(
-                padding: const EdgeInsets.only(top: 12.0),
-                child: Text(_errorText!,
-                    style: const TextStyle(
-                        color: Colors.red, fontWeight: FontWeight.bold)),
-              ),
-
-            const SizedBox(height: 16),
-
-            // --- CAMPO CONDICIONAL: CONTRASEÑA ACTUAL ---
-            if (widget.requireCurrentPassword) ...[
+      // 3. Control de ancho y scroll interno
+      content: SizedBox(
+        width: dialogWidth,
+        child: SingleChildScrollView(
+          child: Column(
+            mainAxisSize: MainAxisSize.min,
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              Text(widget.description,
+                  style: const TextStyle(fontSize: 14, color: Colors.black54)),
+              if (_errorText != null)
+                Padding(
+                  padding: const EdgeInsets.only(top: 12.0),
+                  child: Text(_errorText!,
+                      style: const TextStyle(
+                          color: Colors.red, fontWeight: FontWeight.bold)),
+                ),
+              const SizedBox(height: 16),
+              if (widget.requireCurrentPassword) ...[
+                _buildPasswordField(
+                  controller: _currentPasswordController,
+                  labelText: 'Tu Contraseña Actual',
+                  isVisible: _isCurrentVisible,
+                  onToggleVisibility: () =>
+                      setState(() => _isCurrentVisible = !_isCurrentVisible),
+                  decorationBuilder: safeDecoration, // Pasamos el builder
+                ),
+                const SizedBox(height: 16),
+              ],
               _buildPasswordField(
-                controller: _currentPasswordController,
-                labelText: 'Tu Contraseña Actual',
-                isVisible: _isCurrentVisible,
+                controller: _passwordController,
+                labelText: 'Nueva Contraseña',
+                hintText: 'Mínimo 6 caracteres',
+                isVisible: _isPasswordVisible,
                 onToggleVisibility: () =>
-                    setState(() => _isCurrentVisible = !_isCurrentVisible),
+                    setState(() => _isPasswordVisible = !_isPasswordVisible),
+                decorationBuilder: safeDecoration,
               ),
               const SizedBox(height: 16),
+              _buildPasswordField(
+                controller: _confirmController,
+                labelText: 'Confirmar Contraseña',
+                hintText: 'Repite la contraseña',
+                isVisible: _isConfirmVisible,
+                onToggleVisibility: () =>
+                    setState(() => _isConfirmVisible = !_isConfirmVisible),
+                decorationBuilder: safeDecoration,
+              ),
             ],
-
-            // --- CAMPO: NUEVA CONTRASEÑA ---
-            _buildPasswordField(
-              controller: _passwordController,
-              labelText: 'Nueva Contraseña',
-              hintText: 'Mínimo 6 caracteres',
-              isVisible: _isPasswordVisible,
-              onToggleVisibility: () =>
-                  setState(() => _isPasswordVisible = !_isPasswordVisible),
-            ),
-
-            const SizedBox(height: 16),
-
-            // --- CAMPO: CONFIRMAR NUEVA CONTRASEÑA ---
-            _buildPasswordField(
-              controller: _confirmController,
-              labelText: 'Confirmar Contraseña',
-              hintText: 'Repite la contraseña',
-              isVisible: _isConfirmVisible,
-              onToggleVisibility: () =>
-                  setState(() => _isConfirmVisible = !_isConfirmVisible),
-            ),
-          ],
+          ),
         ),
       ),
+      actionsPadding: const EdgeInsets.all(24),
       actions: [
         TextButton(
           onPressed: () => Navigator.pop(context, null),
@@ -146,29 +167,34 @@ class _ReusablePasswordDialogState extends State<ReusablePasswordDialog> {
             backgroundColor: theme.colorScheme.primary,
             foregroundColor: theme.colorScheme.onPrimary,
             elevation: 5,
+            minimumSize: const Size(100, 45), // Botón consistente
           ),
         ),
       ],
     );
   }
 
-  // Widget de ayuda para no repetir el TextField
   Widget _buildPasswordField({
     required TextEditingController controller,
     required String labelText,
     String? hintText,
     required bool isVisible,
     required VoidCallback onToggleVisibility,
+    required InputDecoration Function({
+      required String label,
+      String? hintText,
+      required IconData icon,
+      required Widget suffixIcon,
+    }) decorationBuilder,
   }) {
     return TextField(
       controller: controller,
       obscureText: !isVisible,
       onChanged: (value) => setState(() => _errorText = null),
-      decoration: InputDecoration(
-        labelText: labelText,
+      decoration: decorationBuilder(
+        label: labelText,
         hintText: hintText,
-        border: const OutlineInputBorder(),
-        prefixIcon: const Icon(Icons.lock_outline),
+        icon: Icons.lock_outline,
         suffixIcon: IconButton(
           icon: Icon(isVisible ? Icons.visibility : Icons.visibility_off),
           onPressed: onToggleVisibility,

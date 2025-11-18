@@ -1,10 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 
-/// Un diálogo reutilizable para "Crear" o "Modificar" una licencia.
-///
-/// Devuelve un Map<String, String> con {'tipo': ..., 'max': ...} si se confirma,
-/// o null si se cancela.
 class ConfigureLicenseDialog extends StatefulWidget {
   final String title;
   final String submitButtonText;
@@ -32,12 +28,10 @@ class _ConfigureLicenseDialogState extends State<ConfigureLicenseDialog> {
   @override
   void initState() {
     super.initState();
-    // Establece los valores iniciales (para 'Modificar' o 'Crear')
     _selectedType = widget.initialType ?? 'basica';
     _showCustomField = (_selectedType == 'personalizada');
     _maxUsersController.text = widget.initialMaxUsers?.toString() ?? '';
 
-    // Si es 'custom' pero no hay usuarios, pone 10 como placeholder (opcional)
     if (_showCustomField && _maxUsersController.text.isEmpty) {
       _maxUsersController.text = '10';
     }
@@ -49,32 +43,25 @@ class _ConfigureLicenseDialogState extends State<ConfigureLicenseDialog> {
     super.dispose();
   }
 
-  // Lógica para manejar el cambio del dropdown
   void _onTypeChanged(String? newType) {
     if (newType == null) return;
     setState(() {
       _selectedType = newType;
       _showCustomField = (newType == 'personalizada');
 
-      // Asignar usuarios por defecto si no es custom
       if (newType == 'basica') _maxUsersController.text = '3';
-      if (newType == 'mediana')
-        _maxUsersController.text = '5'; // (5 segun tu backend)
-      if (newType == 'pro')
-        _maxUsersController.text = '7'; // (7 segun tu backend)
+      if (newType == 'mediana') _maxUsersController.text = '5';
+      if (newType == 'pro') _maxUsersController.text = '7';
       if (newType == 'personalizada' && widget.initialType != 'personalizada') {
-        _maxUsersController.text = '10'; // Placeholder para personalizada
+        _maxUsersController.text = '10';
       }
     });
   }
 
-  // Valida el formulario y lo cierra, devolviendo los datos
   void _submit() {
     if (!_formKey.currentState!.validate()) {
-      return; // No envía si el formulario no es válido
+      return;
     }
-
-    // Devuelve los nuevos valores al Dashboard
     Navigator.pop(context, {
       'tipo': _selectedType,
       'max': _maxUsersController.text.trim(),
@@ -83,80 +70,104 @@ class _ConfigureLicenseDialogState extends State<ConfigureLicenseDialog> {
 
   @override
   Widget build(BuildContext context) {
+    final size = MediaQuery.of(context).size;
+    final double dialogWidth = size.width > 600 ? 400 : size.width * 0.9;
+
+    InputDecoration safeDecoration({
+      required String label,
+      String? helperText,
+      required IconData icon,
+    }) {
+      return InputDecoration(
+        labelText: label,
+        helperText: helperText,
+        isDense: true, // Hace el campo más compacto
+        contentPadding: const EdgeInsets.symmetric(
+            horizontal: 16, vertical: 16), // Fijo y seguro
+        border: OutlineInputBorder(borderRadius: BorderRadius.circular(10)),
+        prefixIcon: Icon(icon, color: Colors.amber),
+      );
+    }
+
     return AlertDialog(
       shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
-      // 1. Título dinámico
-      title: Text(widget.title,
-          style:
-              const TextStyle(fontWeight: FontWeight.bold, color: Colors.teal)),
-      content: Form(
-        key: _formKey,
+      title: Text(
+        widget.title,
+        style: const TextStyle(fontWeight: FontWeight.bold, color: Colors.teal),
+      ),
+      contentPadding: const EdgeInsets.fromLTRB(24, 20, 24, 0),
+      content: SizedBox(
+        width: dialogWidth,
         child: SingleChildScrollView(
-          child: Column(
-            mainAxisSize: MainAxisSize.min,
-            children: [
-              // --- Dropdown de Tipo ---
-              DropdownButtonFormField<String>(
-                value: _selectedType,
-                decoration: InputDecoration(
-                  labelText: 'Tipo de Licencia',
-                  border: OutlineInputBorder(
-                    borderRadius: BorderRadius.circular(10),
+          child: Form(
+            key: _formKey,
+            child: Column(
+              mainAxisSize: MainAxisSize.min,
+              children: [
+                DropdownButtonFormField<String>(
+                  value: _selectedType,
+                  isExpanded: true,
+                  decoration: safeDecoration(
+                    label: 'Tipo de Licencia',
+                    icon: Icons.star,
                   ),
-                  prefixIcon: const Icon(Icons.star, color: Colors.amber),
+                  items: const [
+                    DropdownMenuItem(
+                        value: 'basica', child: Text('Básica (3 usuarios)')),
+                    DropdownMenuItem(
+                        value: 'mediana', child: Text('Mediana (5 usuarios)')),
+                    DropdownMenuItem(
+                        value: 'pro', child: Text('Pro (7 usuarios)')),
+                    DropdownMenuItem(
+                        value: 'personalizada', child: Text('Personalizada')),
+                  ],
+                  onChanged: _onTypeChanged,
                 ),
-                items: const [
-                  DropdownMenuItem(
-                      value: 'basica', child: Text('Básica (3 usuarios)')),
-                  DropdownMenuItem(
-                      value: 'mediana', child: Text('Mediana (5 usuarios)')),
-                  DropdownMenuItem(
-                      value: 'pro', child: Text('Pro (7 usuarios)')),
-                  DropdownMenuItem(
-                      value: 'personalizada', child: Text('Personalizada')),
-                ],
-                onChanged: _onTypeChanged,
-              ),
-              const SizedBox(height: 16),
-
-              // --- Campo Condicional para 'Personalizada' ---
-              // (Usamos AnimatedSize para una transición suave)
-              AnimatedSize(
-                duration: const Duration(milliseconds: 300),
-                curve: Curves.easeInOut,
-                child: Visibility(
-                  visible: _showCustomField,
-                  child: TextFormField(
-                    controller: _maxUsersController,
-                    decoration: InputDecoration(
-                      labelText: 'Máx. Usuarios (Personalizada)',
-                      border: OutlineInputBorder(
-                        borderRadius: BorderRadius.circular(10),
-                      ),
-                      prefixIcon: const Icon(Icons.people),
+                const SizedBox(height: 16),
+                AnimatedSize(
+                  duration: const Duration(milliseconds: 300),
+                  curve: Curves.easeInOut,
+                  child: Visibility(
+                    visible: _showCustomField,
+                    child: Column(
+                      children: [
+                        if (_showCustomField) const SizedBox(height: 16),
+                        TextFormField(
+                          controller: _maxUsersController,
+                          decoration: safeDecoration(
+                            label: 'Máx. Usuarios',
+                            helperText: 'Ingrese el límite personalizado',
+                            icon: Icons.people,
+                          ).copyWith(
+                            prefixIcon: const Icon(Icons.people),
+                          ),
+                          keyboardType: TextInputType.number,
+                          inputFormatters: [
+                            FilteringTextInputFormatter.digitsOnly
+                          ],
+                          validator: (value) {
+                            if (!_showCustomField) return null;
+                            if (value == null || value.trim().isEmpty) {
+                              return 'Requerido';
+                            }
+                            final int? num = int.tryParse(value);
+                            if (num == null || num <= 0) {
+                              return 'Debe ser > 0';
+                            }
+                            return null;
+                          },
+                        ),
+                        if (_showCustomField) const SizedBox(height: 8),
+                      ],
                     ),
-                    keyboardType: TextInputType.number,
-                    inputFormatters: [FilteringTextInputFormatter.digitsOnly],
-                    validator: (value) {
-                      if (!_showCustomField)
-                        return null; // No validar si no es custom
-
-                      if (value == null || value.trim().isEmpty) {
-                        return 'Requerido para tipo Personalizada';
-                      }
-                      final int? num = int.tryParse(value);
-                      if (num == null || num <= 0) {
-                        return 'Debe ser > 0';
-                      }
-                      return null;
-                    },
                   ),
                 ),
-              ),
-            ],
+              ],
+            ),
           ),
         ),
       ),
+      actionsPadding: const EdgeInsets.all(24),
       actions: [
         TextButton(
           onPressed: () => Navigator.pop(context, null),
@@ -168,8 +179,8 @@ class _ConfigureLicenseDialogState extends State<ConfigureLicenseDialog> {
             backgroundColor: Colors.teal,
             shape:
                 RoundedRectangleBorder(borderRadius: BorderRadius.circular(8)),
+            minimumSize: const Size(100, 45),
           ),
-          // 2. Texto del botón dinámico
           child: Text(widget.submitButtonText,
               style: const TextStyle(color: Colors.white)),
         ),
