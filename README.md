@@ -67,8 +67,17 @@ Diseño: Material Design 3 con componentes personalizados responsivos.
 Login
 <img width="1102" height="557" alt="image" src="https://github.com/user-attachments/assets/edaf897f-f9fd-4498-9b75-1ff9a5ce07fa" />
 
+Register
+<img width="983" height="487" alt="image" src="https://github.com/user-attachments/assets/e399475f-9ad5-4074-ae27-228ba8e5510c" />
 
 Dashboard Admin
+<img width="1920" height="948" alt="image" src="https://github.com/user-attachments/assets/e3ba1cf7-6fce-4ac2-bffa-f9a0d2068716" />
+
+Dashboard Residencia
+<img width="1918" height="946" alt="image" src="https://github.com/user-attachments/assets/4b58e485-f469-49fb-a7d0-3ec7db8daa6d" />
+
+Dashboard Profesional
+<img width="1908" height="802" alt="image" src="https://github.com/user-attachments/assets/7eb35efe-8f69-4575-8cb7-2ac4230a36e9" />
 
 Detalle Clínico
 
